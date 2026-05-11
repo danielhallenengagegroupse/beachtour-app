@@ -43,13 +43,20 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Each position can only appear once" }, { status: 400 });
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.rankingPointRule.deleteMany();
-      await tx.rankingPointRule.createMany({
-        data: normalizedRules.sort((left, right) => left.position - right.position),
-      });
-      await rebuildAllStandings(tx);
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.rankingPointRule.deleteMany();
+        await tx.rankingPointRule.createMany({
+          data: normalizedRules.sort((left, right) => left.position - right.position),
+        });
+        await rebuildAllStandings(tx);
+      },
+      {
+        // Rebuilding standings can touch many rows and exceed Prisma's default 5s interactive transaction timeout.
+        maxWait: 10_000,
+        timeout: 60_000,
+      }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
