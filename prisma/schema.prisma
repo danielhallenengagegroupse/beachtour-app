@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id        Int     @id @default(autoincrement())
+  name      String
+  email     String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  gameTeams GameTeam[]
+  standings PlayerStanding[]
+  dailyRankings DailyRanking[]
+  gamesWon Game[] @relation("WinnerGames")
+  weekParticipations WeekParticipant[]
+  seasonStanding SeasonStanding?
+
+  @@map("players")
+}
+
+model Week {
+  id        Int     @id @default(autoincrement())
+  weekNumber Int     @unique
+  startDate DateTime
+  endDate   DateTime
+  rounds    Int      @default(1)
+  rainyDay  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  days Day[]
+  standings PlayerStanding[]
+  participants WeekParticipant[]
+
+  @@map("weeks")
+}
+
+model WeekParticipant {
+  id        Int      @id @default(autoincrement())
+  weekId    Int
+  playerId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  week   Week   @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, playerId])
+  @@map("week_participants")
+}
+
+model Day {
+  id        Int     @id @default(autoincrement())
+  weekId    Int
+  dayNumber Int
+  date      DateTime @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  week Week @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  games Game[]
+  dailyRankings DailyRanking[]
+
+  @@map("days")
+}
+
+model RankingPointRule {
+  id        Int      @id @default(autoincrement())
+  position  Int      @unique
+  points    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ranking_point_rules")
+}
+
+model Game {
+  id        Int     @id @default(autoincrement())
+  dayId     Int
+  roundNumber Int   @default(1)
+  gameNumber Int
+  team1Score Int?
+  team2Score Int?
+  winnerId  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  day Day @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  teams GameTeam[]
+  winner Player? @relation("WinnerGames", fields: [winnerId], references: [id])
+
+  @@unique([dayId, gameNumber])
+  @@map("games")
+}
+
+model GameTeam {
+  id        Int     @id @default(autoincrement())
+  gameId    Int
+  team      Int     // 1 or 2
+  playerId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, team, playerId])
+  @@map("game_teams")
+}
+
+model DailyRanking {
+  id        Int     @id @default(autoincrement())
+  dayId     Int
+  playerId  Int
+  rank      Int
+  points    Int
+  winsCount Float
+  lossesCount Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  day Day @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([dayId, playerId])
+  @@map("daily_rankings")
+}
+
+model PlayerStanding {
+  id        Int     @id @default(autoincrement())
+  weekId    Int
+  playerId  Int
+  totalPoints Int @default(0)
+  gamesPlayed Int @default(0)
+  wins      Float @default(0)
+  losses    Float @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  week Week @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, playerId])
+  @@map("player_standings")
+}
+
+model SeasonStanding {
+  id        Int     @id @default(autoincrement())
+  playerId  Int
+  totalPoints Int @default(0)
+  gamesPlayed Int @default(0)
+  wins      Float @default(0)
+  losses    Float @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  player    Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId])
+  @@map("season_standings")
+}

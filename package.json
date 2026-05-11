@@ -1,0 +1,35 @@
+{
+  "name": "app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postinstall": "prisma generate",
+    "start": "next start",
+    "lint": "eslint",
+    "start:prod": "next start -p 3000",
+    "service:site": "powershell -ExecutionPolicy Bypass -File ./scripts/start-site.ps1",
+    "service:tunnel": "powershell -ExecutionPolicy Bypass -File ./scripts/start-tunnel.ps1",
+    "service:url": "powershell -ExecutionPolicy Bypass -File ./scripts/get-tunnel-url.ps1",
+    "service:install": "powershell -ExecutionPolicy Bypass -File ./scripts/install-autostart.ps1",
+    "service:remove": "powershell -ExecutionPolicy Bypass -File ./scripts/remove-autostart.ps1"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "next": "16.2.4",
+    "prisma": "^6.19.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

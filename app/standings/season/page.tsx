@@ -1,0 +1,157 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+
+interface SeasonStanding {
+  playerId: number;
+  player: { id: number; name: string };
+  weekPoints: number[];
+  droppedWeekIndexes: number[];
+  droppedPoints: number;
+  totalPoints: number;
+}
+
+interface SeasonWeek {
+  id: number;
+  weekNumber: number;
+}
+
+interface SeasonStandingsResponse {
+  weeks: SeasonWeek[];
+  standings: SeasonStanding[];
+}
+
+export default function SeasonStandingsPage() {
+  const [weeks, setWeeks] = useState<SeasonWeek[]>([]);
+  const [standings, setStandings] = useState<SeasonStanding[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSeasonStandings();
+  }, []);
+
+  const fetchSeasonStandings = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/standings?type=season");
+      const data: SeasonStandingsResponse = await response.json();
+      setWeeks(Array.isArray(data?.weeks) ? data.weeks : []);
+      setStandings(Array.isArray(data?.standings) ? data.standings : []);
+    } catch (err) {
+      console.error("Failed to fetch season standings:", err);
+      setWeeks([]);
+      setStandings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-indigo-600 text-white shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">🏆 Säsongens Ställning</h1>
+            <p className="text-indigo-100 mt-2">Totalt ställning för hela säsongen</p>
+          </div>
+          <Link href="/public" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
+            ← Till Publik Startsida
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Standings Table */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+            <h2 className="text-3xl font-bold">🏐 Säsongens Slutställning</h2>
+            <p className="text-indigo-100 text-sm mt-2">Sommaren 2026 Beachvolley Tour</p>
+          </div>
+
+          {loading ? (
+            <div className="p-12 text-center text-gray-500">Laddar ställning...</div>
+          ) : standings.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">Ingen ställningsdata tillgänglig än.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Position</th>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Spelare</th>
+                    {weeks.map((week) => (
+                      <th key={week.id} className="px-4 py-4 text-center text-sm font-bold text-gray-700 whitespace-nowrap">
+                        Vecka {week.weekNumber}
+                      </th>
+                    ))}
+                    <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Total Poäng</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {standings.map((standing, index) => {
+                    let medalEmoji = "";
+                    if (index === 0) medalEmoji = "🥇";
+                    else if (index === 1) medalEmoji = "🥈";
+                    else if (index === 2) medalEmoji = "🥉";
+
+                    return (
+                      <tr
+                        key={standing.playerId}
+                        className={`hover:bg-gray-50 ${
+                          index < 3 ? "bg-yellow-50" : ""
+                        }`}
+                      >
+                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600 text-white font-bold">
+                              {medalEmoji || index + 1}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          {standing.player.name}
+                        </td>
+                        {standing.weekPoints.map((points, pointsIndex) => (
+                          <td
+                            key={`${standing.playerId}-${pointsIndex}`}
+                            className={`px-4 py-4 text-center text-sm font-medium ${
+                              standing.droppedWeekIndexes.includes(pointsIndex) ? "text-red-600" : "text-gray-700"
+                            }`}
+                          >
+                            {points}
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-lg">
+                            {standing.totalPoints}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!loading && standings.length > 0 && (
+            <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 text-sm text-gray-700">
+              <span className="font-medium text-red-600">Röd text</span> = borttagna veckor (de 2 lägsta veckopoängen)
+            </div>
+          )}
+        </div>
+
+        {/* Info Card */}
+        <div className="mt-8 bg-indigo-50 border-l-4 border-indigo-600 rounded-lg p-6">
+          <h3 className="font-bold text-indigo-900 mb-2">Hur Poängräkningen Fungerar</h3>
+          <p className="text-indigo-800 text-sm">
+            Spelare tjänar poäng varje vecka baserat på poängtabellen. Alla veckor visas i tabellen, även om de inte spelats ännu.
+            De två lägsta veckopoängen räknas bort från totalsumman.
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}

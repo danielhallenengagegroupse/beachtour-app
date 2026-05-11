@@ -1,0 +1,10 @@
+# Copy this file to cloudflared/config.yml and replace placeholder values.
+# This config creates a stable public hostname for your local Next.js app.
+
+tunnel: REPLACE_WITH_TUNNEL_ID
+credentials-file: C:\\Users\\REPLACE_WITH_WINDOWS_USER\\.cloudflared\\REPLACE_WITH_TUNNEL_ID.json
+
+ingress:
+  - hostname: REPLACE_WITH_HOSTNAME
+    service: http://localhost:3000
+  - service: http_status:404
