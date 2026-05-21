@@ -53,7 +53,7 @@ function scoreGame(game: GeneratedGame, teammateCounts: Counts, opponentCounts: 
     getCount(opponentCounts, game.team1[1], game.team2[0]) +
     getCount(opponentCounts, game.team1[1], game.team2[1]);
 
-  return teammatePenalty * 10 + opponentPenalty;
+  return teammatePenalty * 10 + opponentPenalty * 2;
 }
 
 function chooseBestPairing(group: [number, number, number, number], teammateCounts: Counts, opponentCounts: Counts) {
@@ -73,12 +73,6 @@ function chooseBestPairing(group: [number, number, number, number], teammateCoun
   }
 
   return bestPairing;
-}
-
-function totalGroupInteraction(group: [number, number, number, number], teammateCounts: Counts, opponentCounts: Counts): number {
-  const [a, b, c, d] = group;
-  const pairs: [number, number][] = [[a, b], [a, c], [a, d], [b, c], [b, d], [c, d]];
-  return pairs.reduce((sum, [x, y]) => sum + getCount(teammateCounts, x, y) + getCount(opponentCounts, x, y), 0);
 }
 
 function combinations(values: number[], size: number): number[][] {
@@ -101,37 +95,49 @@ function combinations(values: number[], size: number): number[][] {
   return result;
 }
 
-function chooseBestGroup(available: number[], teammateCounts: Counts, opponentCounts: Counts) {
-  const allGroups = combinations(available, 4);
+// Beam-search partition: evaluates the full round's grouping globally rather than greedily.
+// For N ≤ 12 the beam is wide enough to be exhaustive (all ~5775 partitions checked).
+// For N = 16 a beam of 1000 gives near-optimal results efficiently.
+function beamPartition(
+  available: number[],
+  teammateCounts: Counts,
+  opponentCounts: Counts
+): GeneratedGame[] {
+  if (available.length < 4) return [];
 
-  let bestGroup = allGroups[0] as [number, number, number, number];
-  let bestPairing = chooseBestPairing(bestGroup, teammateCounts, opponentCounts);
-  let bestScore = scoreGame(bestPairing, teammateCounts, opponentCounts);
+  const sorted = [...available].sort((a, b) => a - b);
+  const numGroups = Math.floor(sorted.length / 4);
+  const beamWidth = sorted.length <= 12 ? 10_000 : 1_000;
 
-  for (let index = 1; index < allGroups.length; index++) {
-    const candidateGroup = allGroups[index] as [number, number, number, number];
-    const candidatePairing = chooseBestPairing(candidateGroup, teammateCounts, opponentCounts);
-    const candidateScore = scoreGame(candidatePairing, teammateCounts, opponentCounts);
+  type BeamItem = { remaining: number[]; games: GeneratedGame[]; score: number };
+  let beam: BeamItem[] = [{ remaining: sorted, games: [], score: 0 }];
 
-    if (candidateScore < bestScore) {
-      bestGroup = candidateGroup;
-      bestPairing = candidatePairing;
-      bestScore = candidateScore;
-      continue;
-    }
+  for (let step = 0; step < numGroups; step++) {
+    const nextBeam: BeamItem[] = [];
 
-    if (candidateScore === bestScore) {
-      const candidateInteraction = totalGroupInteraction(candidateGroup, teammateCounts, opponentCounts);
-      const bestInteraction = totalGroupInteraction(bestGroup, teammateCounts, opponentCounts);
+    for (const { remaining, games, score } of beam) {
+      const anchor = remaining[0];
+      const rest = remaining.slice(1);
 
-      if (candidateInteraction < bestInteraction || (candidateInteraction === bestInteraction && Math.random() < 0.5)) {
-        bestGroup = candidateGroup;
-        bestPairing = candidatePairing;
+      for (const trio of combinations(rest, 3)) {
+        const group: [number, number, number, number] = [anchor, trio[0], trio[1], trio[2]];
+        const pairing = chooseBestPairing(group, teammateCounts, opponentCounts);
+        const gameScore = scoreGame(pairing, teammateCounts, opponentCounts);
+        const newRemaining = rest.filter((p) => !trio.includes(p));
+
+        nextBeam.push({
+          remaining: newRemaining,
+          games: [...games, pairing],
+          score: score + gameScore,
+        });
       }
     }
+
+    nextBeam.sort((a, b) => a.score - b.score || (Math.random() < 0.5 ? -1 : 1));
+    beam = nextBeam.slice(0, beamWidth);
   }
 
-  return bestGroup;
+  return beam[0].games;
 }
 
 function scoreRestGroup(
@@ -328,18 +334,10 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
       incrementCount(restPairCounts, left, right);
     }
 
-    while (available.length >= 4) {
-      const group = chooseBestGroup(available, teammateCounts, opponentCounts);
-      const game = chooseBestPairing(group, teammateCounts, opponentCounts);
+    const roundGames = beamPartition(available, teammateCounts, opponentCounts);
+    for (const game of roundGames) {
       games.push(game);
       applyGameHistory(game, teammateCounts, opponentCounts);
-
-      for (const playerId of group) {
-        const index = available.indexOf(playerId);
-        if (index >= 0) {
-          available.splice(index, 1);
-        }
-      }
     }
 
     const assignedGames = assignCourts(games, courtCounts);
