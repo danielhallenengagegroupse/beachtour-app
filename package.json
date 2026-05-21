@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && next build",
+    "build": "(prisma migrate resolve --applied 20260511100000_add_week_complete || true) && prisma migrate deploy && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
@@ -33,6 +33,7 @@
     "markdown-it": "^14.1.1",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "xlsx": "^0.18.5"
   }
 }
