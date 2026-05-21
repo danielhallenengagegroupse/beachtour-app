@@ -162,14 +162,15 @@ export default function WeeksPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create week");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to create week");
       }
 
       setWeekForm({ weekNumber: "", date: "" });
       await fetchWeeks();
     } catch (createError) {
       console.error(createError);
-      setError("Misslyckades att skapa veckan.");
+      setError(createError instanceof Error ? createError.message : "Misslyckades att skapa veckan.");
     } finally {
       setLoading(false);
     }

@@ -50,6 +50,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(week, { status: 201 });
   } catch (error) {
     console.error("Error creating week:", error);
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code: string }).code === "P2002"
+    ) {
+      return NextResponse.json({ error: "Veckan finns redan" }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Failed to create week" },
       { status: 500 }
