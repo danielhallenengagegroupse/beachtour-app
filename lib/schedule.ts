@@ -312,10 +312,10 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
   // and return the one with the most balanced opponent distribution.
   const ATTEMPTS = 15;
   let best = generateScheduleAttempt(playerIds, rounds);
-  let bestScore = scoreOpponentDistribution(best);
+  let bestScore = scoreScheduleQuality(best);
   for (let i = 1; i < ATTEMPTS; i++) {
     const candidate = generateScheduleAttempt(playerIds, rounds);
-    const score = scoreOpponentDistribution(candidate);
+    const score = scoreScheduleQuality(candidate);
     if (score < bestScore) {
       best = candidate;
       bestScore = score;
@@ -326,19 +326,26 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
 
 // Score a completed schedule by sum-of-squares of opponent encounter counts.
 // Lower = more balanced distribution (all-2s would be the global minimum).
-function scoreOpponentDistribution(schedule: GeneratedRound[]): number {
+// Combined quality score for the best-of-N restart selection.
+// Teammate balance is weighted 10x over opponent balance to match in-game priorities.
+function scoreScheduleQuality(schedule: GeneratedRound[]): number {
+  const teammateCounts = new Map<string, number>();
   const opponentCounts = new Map<string, number>();
   for (const round of schedule) {
     for (const game of round.games) {
+      incrementCount(teammateCounts, game.team1[0], game.team1[1]);
+      incrementCount(teammateCounts, game.team2[0], game.team2[1]);
       incrementCount(opponentCounts, game.team1[0], game.team2[0]);
       incrementCount(opponentCounts, game.team1[0], game.team2[1]);
       incrementCount(opponentCounts, game.team1[1], game.team2[0]);
       incrementCount(opponentCounts, game.team1[1], game.team2[1]);
     }
   }
-  let score = 0;
-  for (const count of opponentCounts.values()) score += count * count;
-  return score;
+  let teammateScore = 0;
+  for (const count of teammateCounts.values()) teammateScore += count * count;
+  let opponentScore = 0;
+  for (const count of opponentCounts.values()) opponentScore += count * count;
+  return teammateScore * 10 + opponentScore;
 }
 
 function generateScheduleAttempt(playerIds: number[], rounds: number): GeneratedRound[] {
