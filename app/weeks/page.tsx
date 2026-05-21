@@ -29,12 +29,6 @@ interface Week {
   days: Day[];
 }
 
-interface RankingPointRule {
-  id?: number;
-  position: number;
-  points: number;
-}
-
 interface UnknownPlayerPrompt {
   name: string;
   remaining: string[];
@@ -53,7 +47,6 @@ function normalizeName(value: string) {
 export default function WeeksPage() {
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [rules, setRules] = useState<RankingPointRule[]>([]);
   const [gameCount, setGameCount] = useState(0);
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
@@ -74,7 +67,7 @@ export default function WeeksPage() {
   });
 
   useEffect(() => {
-    void Promise.all([fetchWeeks(), fetchPlayers(), fetchRules()]);
+    void Promise.all([fetchWeeks(), fetchPlayers()]);
   }, []);
 
   useEffect(() => {
@@ -141,17 +134,6 @@ export default function WeeksPage() {
     } catch (fetchError) {
       console.error("Failed to fetch players:", fetchError);
       setError("Misslyckades att hämta spelare.");
-    }
-  }
-
-  async function fetchRules() {
-    try {
-      const response = await fetch("/api/ranking-points");
-      const data = await response.json();
-      setRules(Array.isArray(data) ? data : []);
-    } catch (fetchError) {
-      console.error("Failed to fetch ranking points:", fetchError);
-      setError("Misslyckades att hämta poängtabellen.");
     }
   }
 
@@ -399,50 +381,6 @@ export default function WeeksPage() {
     }
   }
 
-  function updateRule(index: number, field: "position" | "points", value: string) {
-    setRules((current) =>
-      current.map((rule, ruleIndex) =>
-        ruleIndex === index
-          ? { ...rule, [field]: Number(value) || 0 }
-          : rule
-      )
-    );
-  }
-
-  function addRule() {
-    const nextPosition = (rules.at(-1)?.position ?? 0) + 1;
-    setRules((current) => [...current, { position: nextPosition, points: 0 }]);
-  }
-
-  function removeRule(index: number) {
-    setRules((current) => current.filter((_, ruleIndex) => ruleIndex !== index));
-  }
-
-  async function handleSaveRules() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/ranking-points", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rules }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error ?? "Failed to save ranking points");
-      }
-
-      await fetchRules();
-    } catch (saveError) {
-      console.error(saveError);
-      setError(saveError instanceof Error ? saveError.message : "Misslyckades att spara poängtabellen.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleCalendarImport() {
     if (!selectedWeek || !calendarUrl.trim()) {
       return;
@@ -584,7 +522,7 @@ export default function WeeksPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
           <div>
             <h1 className="text-3xl font-bold">📅 Veckor</h1>
-            <p className="mt-2 text-indigo-100">Skapa veckor, välj deltagare, justera poängtabellen och auto-generera matcher.</p>
+            <p className="mt-2 text-indigo-100">Skapa veckor, välj deltagare och auto-generera matcher.</p>
           </div>
           <div className="flex gap-3">
             <Link href="/games" className="rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400">
@@ -628,60 +566,6 @@ export default function WeeksPage() {
               {loading ? "Sparar..." : "Skapa Vecka"}
             </button>
           </form>
-        </div>
-
-        <div className="mb-8 rounded-lg bg-white p-8 shadow-md">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Poängtabell</h2>
-              <p className="mt-1 text-sm text-gray-500">Spelare med samma antal vinster får samma placering och samma rankingpoäng. Nästa placering hoppar enligt delad placering.</p>
-            </div>
-            <button
-              type="button"
-              onClick={addRule}
-              className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 hover:bg-gray-200"
-            >
-              Lägg till rad
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {rules.map((rule, index) => (
-              <div key={`${rule.position}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-3">
-                <input
-                  type="number"
-                  min="1"
-                  value={rule.position}
-                  onChange={(event) => updateRule(index, "position", event.target.value)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <input
-                  type="number"
-                  value={rule.points}
-                  onChange={(event) => updateRule(index, "points", event.target.value)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeRule(index)}
-                  className="rounded-lg bg-red-50 px-4 py-2 font-medium text-red-600 hover:bg-red-100"
-                >
-                  Ta bort
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              onClick={() => void handleSaveRules()}
-              disabled={loading || rules.length === 0}
-              className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              Spara poängtabell
-            </button>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">

@@ -39,7 +39,7 @@ export default function AdminPage() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-12">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <Link href="/players" className="rounded-lg bg-white p-6 shadow-md transition-shadow hover:shadow-lg">
             <div className="text-3xl">👥</div>
             <h2 className="mt-3 text-xl font-bold text-gray-800">Spelare</h2>
@@ -68,6 +68,12 @@ export default function AdminPage() {
             <div className="text-3xl">🏆</div>
             <h2 className="mt-3 text-xl font-bold text-gray-800">Säsong</h2>
             <p className="mt-2 text-sm text-gray-600">Se totalställning med borttagna veckor.</p>
+          </Link>
+
+          <Link href="/ranking-points" className="rounded-lg bg-white p-6 shadow-md transition-shadow hover:shadow-lg">
+            <div className="text-3xl">🏅</div>
+            <h2 className="mt-3 text-xl font-bold text-gray-800">Poängtabell</h2>
+            <p className="mt-2 text-sm text-gray-600">Hantera rankingpoäng per placering.</p>
           </Link>
         </div>
 
