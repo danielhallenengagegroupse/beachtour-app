@@ -524,7 +524,7 @@ export default function WeeksPage() {
             <Link href="/games" className="rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400">
               Till Matcher
             </Link>
-            <Link href="/" className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50">
+            <Link href="https://beachtour.vkbjarke.se/admin" className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50">
               ← Till Startsidan
             </Link>
           </div>

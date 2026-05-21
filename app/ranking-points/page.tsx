@@ -81,7 +81,7 @@ export default function RankingPointsPage() {
             <h1 className="text-3xl font-bold">🏅 Poängtabell</h1>
             <p className="mt-2 text-indigo-100">Hantera rankingpoäng per placering.</p>
           </div>
-          <Link href="/" className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50">
+          <Link href="https://beachtour.vkbjarke.se/admin" className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50">
             ← Till Startsidan
           </Link>
         </div>
