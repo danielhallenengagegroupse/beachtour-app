@@ -6,7 +6,7 @@ import Link from "next/link";
 interface Player {
   id: number;
   name: string;
-  email?: string;
+  weeksPlayed: number;
   createdAt: string;
 }
 
@@ -152,7 +152,7 @@ export default function PlayersPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Namn</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">E-post</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">Antal spelade veckor</th>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Registrerad</th>
                     <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">Åtgärd</th>
                   </tr>
@@ -161,7 +161,7 @@ export default function PlayersPage() {
                   {players.map((player) => (
                     <tr key={player.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">{player.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{player.email || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600 text-center">{player.weeksPlayed}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {new Date(player.createdAt).toLocaleDateString("sv-SE")}
                       </td>

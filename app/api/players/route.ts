@@ -31,10 +31,15 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const players = await prisma.player.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
+      include: {
+        _count: { select: { weekParticipations: true } },
+      },
     });
 
-    return NextResponse.json(players);
+    return NextResponse.json(
+      players.map((p) => ({ ...p, weeksPlayed: p._count.weekParticipations }))
+    );
   } catch (error) {
     console.error("Error fetching players:", error);
     return NextResponse.json(
