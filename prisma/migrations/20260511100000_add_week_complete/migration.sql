@@ -1,0 +1,2 @@
+ALTER TABLE "weeks"
+ADD COLUMN "weekComplete" BOOLEAN NOT NULL DEFAULT false;

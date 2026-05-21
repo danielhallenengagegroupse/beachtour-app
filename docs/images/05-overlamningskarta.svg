@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840">
+  <rect width="1200" height="840" fill="#f8fafc"/>
+  <text x="600" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#0f172a">Overlamningskarta: Vem ansvarar for vad</text>
+
+  <rect x="80" y="120" width="1040" height="680" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+
+  <rect x="130" y="180" width="300" height="540" rx="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <text x="280" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#0c4a6e">Roll: Innehallsansvarig</text>
+  <text x="155" y="275" font-family="Arial, sans-serif" font-size="17" fill="#0c4a6e">- Skapar veckor</text>
+  <text x="155" y="305" font-family="Arial, sans-serif" font-size="17" fill="#0c4a6e">- Lagger till deltagare</text>
+  <text x="155" y="335" font-family="Arial, sans-serif" font-size="17" fill="#0c4a6e">- Rapporterar resultat</text>
+  <text x="155" y="365" font-family="Arial, sans-serif" font-size="17" fill="#0c4a6e">- Publicerar tabeller</text>
+  <text x="155" y="425" font-family="Arial, sans-serif" font-size="16" fill="#0c4a6e">Behov:</text>
+  <text x="155" y="455" font-family="Arial, sans-serif" font-size="16" fill="#0c4a6e">- Admininloggning</text>
+  <text x="155" y="485" font-family="Arial, sans-serif" font-size="16" fill="#0c4a6e">- Grundutbildning (30-45 min)</text>
+
+  <rect x="450" y="180" width="300" height="540" rx="14" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="600" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#14532d">Roll: Driftansvarig</text>
+  <text x="475" y="275" font-family="Arial, sans-serif" font-size="17" fill="#14532d">- Haller datorn igang</text>
+  <text x="475" y="305" font-family="Arial, sans-serif" font-size="17" fill="#14532d">- Kontrollerar tunnel och loggar</text>
+  <text x="475" y="335" font-family="Arial, sans-serif" font-size="17" fill="#14532d">- Hanterar uppstart/autostart</text>
+  <text x="475" y="365" font-family="Arial, sans-serif" font-size="17" fill="#14532d">- Forsta linjens felsokning</text>
+  <text x="475" y="425" font-family="Arial, sans-serif" font-size="16" fill="#14532d">Behov:</text>
+  <text x="475" y="455" font-family="Arial, sans-serif" font-size="16" fill="#14532d">- Windows adminrattigheter</text>
+  <text x="475" y="485" font-family="Arial, sans-serif" font-size="16" fill="#14532d">- Tillgang till scripts-mappen</text>
+
+  <rect x="770" y="180" width="300" height="540" rx="14" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+  <text x="920" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#7c2d12">Roll: Tekniskt stod</text>
+  <text x="795" y="275" font-family="Arial, sans-serif" font-size="17" fill="#7c2d12">- Databas och migreringar</text>
+  <text x="795" y="305" font-family="Arial, sans-serif" font-size="17" fill="#7c2d12">- Kodandringar</text>
+  <text x="795" y="335" font-family="Arial, sans-serif" font-size="17" fill="#7c2d12">- Sakerhet och backup</text>
+  <text x="795" y="365" font-family="Arial, sans-serif" font-size="17" fill="#7c2d12">- Storre incidenter</text>
+  <text x="795" y="425" font-family="Arial, sans-serif" font-size="16" fill="#7c2d12">Behov:</text>
+  <text x="795" y="455" font-family="Arial, sans-serif" font-size="16" fill="#7c2d12">- Repoaccess + deploymentaccess</text>
+  <text x="795" y="485" font-family="Arial, sans-serif" font-size="16" fill="#7c2d12">- Miljovariabler och DNS-konto</text>
+
+  <line x1="430" y1="450" x2="450" y2="450" stroke="#334155" stroke-width="2" marker-end="url(#arrow2)"/>
+  <line x1="750" y1="450" x2="770" y2="450" stroke="#334155" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>

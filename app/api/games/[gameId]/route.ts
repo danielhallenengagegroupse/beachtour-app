@@ -13,7 +13,8 @@ function hasDuplicatePlayers(playerIds: number[]) {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const { gameId } = await context.params;
-    const { team1Score, team2Score, roundNumber, gameNumber, team1Players, team2Players } = await request.json();
+    const { team1Score, team2Score, roundNumber, gameNumber, team1Players, team2Players, deferStandingsRebuild } =
+      await request.json();
 
     const hasScoreUpdate = team1Score !== undefined || team2Score !== undefined;
     const hasStructureUpdate =
@@ -78,6 +79,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         throw new Error("GAME_NOT_FOUND");
       }
 
+      const week = await tx.week.findUnique({
+        where: { id: existingGame.day.weekId },
+        select: { weekComplete: true },
+      });
+
+      if (week?.weekComplete) {
+        throw new Error("WEEK_COMPLETE");
+      }
+
       const playerUpdateRequested = team1Players !== undefined;
       const nextTeam1Players = playerUpdateRequested ? team1Players.map((playerId: number) => Number(playerId)) : [];
       const nextTeam2Players = playerUpdateRequested ? team2Players.map((playerId: number) => Number(playerId)) : [];
@@ -121,17 +131,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         },
       });
 
-      await rebuildWeekStandings(tx, existingGame.day.weekId);
-      await rebuildSeasonStandings(tx);
+      if (!deferStandingsRebuild) {
+        await rebuildWeekStandings(tx, existingGame.day.weekId);
+        await rebuildSeasonStandings(tx);
+      }
 
       return updatedGame;
-    });
+    }, { timeout: 30000, maxWait: 10000 });
 
     return NextResponse.json(game);
   } catch (error) {
     console.error("Error updating game:", error);
     if (error instanceof Error && error.message === "GAME_NOT_FOUND") {
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
+    }
+    if (error instanceof Error && error.message === "WEEK_COMPLETE") {
+      return NextResponse.json({ error: "Week is complete and matches/results are locked" }, { status: 409 });
     }
     return NextResponse.json({ error: "Failed to update game" }, { status: 500 });
   }
@@ -151,6 +166,15 @@ export async function DELETE(_: NextRequest, context: RouteContext) {
         throw new Error("GAME_NOT_FOUND");
       }
 
+      const week = await tx.week.findUnique({
+        where: { id: existingGame.day.weekId },
+        select: { weekComplete: true },
+      });
+
+      if (week?.weekComplete) {
+        throw new Error("WEEK_COMPLETE");
+      }
+
       await tx.game.delete({ where: { id: existingGame.id } });
       await rebuildWeekStandings(tx, existingGame.day.weekId);
       await rebuildSeasonStandings(tx);
@@ -161,6 +185,9 @@ export async function DELETE(_: NextRequest, context: RouteContext) {
     console.error("Error deleting game:", error);
     if (error instanceof Error && error.message === "GAME_NOT_FOUND") {
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
+    }
+    if (error instanceof Error && error.message === "WEEK_COMPLETE") {
+      return NextResponse.json({ error: "Week is complete and matches are locked" }, { status: 409 });
     }
     return NextResponse.json({ error: "Failed to delete game" }, { status: 500 });
   }

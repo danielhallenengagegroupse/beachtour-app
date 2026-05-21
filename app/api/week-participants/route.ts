@@ -30,6 +30,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "weekId and playerId are required" }, { status: 400 });
     }
 
+    const existing = await prisma.weekParticipant.findFirst({
+      where: { weekId, playerId },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return NextResponse.json({ error: "Player already added to week" }, { status: 409 });
+    }
+
     const participant = await prisma.weekParticipant.create({
       data: { weekId, playerId },
       include: { player: true },

@@ -1,5 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Overlamningsdokumentation (svenska)
+
+For overlamning av administrationen av vkbjarke.se, se:
+
+- `docs/OVERLAMNING_VKBJARKE_SV.md`
+- `docs/HANDBOK_ADMIN_TURNERING_SV.md` (separat delningsversion for turneringsadministration)
+
 ## Getting Started
 
 First, run the development server:

@@ -29,7 +29,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Week not found" }, { status: 404 });
     }
 
-    const playerIds = week.participants.map((participant) => participant.playerId);
+    if (week.weekComplete) {
+      return NextResponse.json({ error: "Week is complete and matches/results are locked" }, { status: 409 });
+    }
+
+    const playerIds = [...new Set(week.participants.map((participant) => participant.playerId))];
 
     if (playerIds.length < 4) {
       return NextResponse.json({ error: "At least 4 players must be added before games can be generated" }, { status: 400 });
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
       await tx.dailyRanking.deleteMany({ where: { dayId } });
       await tx.playerStanding.deleteMany({ where: { weekId } });
       await rebuildSeasonStandings(tx);
-    });
+    }, { timeout: 30000, maxWait: 10000 });
 
     const games = await prisma.game.findMany({
       where: { dayId },
@@ -108,6 +112,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ schedule, games }, { status: 201 });
   } catch (error) {
     console.error("Error generating games:", error);
-    return NextResponse.json({ error: "Failed to generate games" }, { status: 500 });
+    const detail = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: `Failed to generate games: ${detail}` }, { status: 500 });
   }
 }

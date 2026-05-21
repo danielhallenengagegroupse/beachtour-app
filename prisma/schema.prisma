@@ -35,6 +35,7 @@ model Week {
   endDate   DateTime
   rounds    Int      @default(1)
   rainyDay  Boolean  @default(false)
+  weekComplete Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

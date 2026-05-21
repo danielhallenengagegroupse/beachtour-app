@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     await prisma.$transaction(async (tx) => {
       await rebuildWeekStandings(tx, weekId);
       await rebuildSeasonStandings(tx);
-    });
+    }, { timeout: 30000, maxWait: 10000 });
 
     return NextResponse.json(
       { message: "Rankings calculated successfully" },

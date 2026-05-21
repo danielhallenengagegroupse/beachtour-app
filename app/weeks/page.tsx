@@ -24,6 +24,7 @@ interface Week {
   startDate: string;
   rounds: number;
   rainyDay: boolean;
+  weekComplete: boolean;
   participants: WeekParticipant[];
   days: Day[];
 }
@@ -32,10 +33,6 @@ interface RankingPointRule {
   id?: number;
   position: number;
   points: number;
-}
-
-interface GameSummary {
-  id: number;
 }
 
 interface UnknownPlayerPrompt {
@@ -82,13 +79,19 @@ export default function WeeksPage() {
 
   useEffect(() => {
     if (!selectedWeekId) {
-      setGameCount(0);
       return;
     }
 
-    setRoundsForGeneration("");
     void fetchGameCount(selectedWeekId);
   }, [selectedWeekId]);
+
+  function selectWeek(weekId: number | null) {
+    setSelectedWeekId(weekId);
+    setRoundsForGeneration("");
+    if (weekId === null) {
+      setGameCount(0);
+    }
+  }
 
   const selectedWeek = useMemo(
     () => weeks.find((week) => week.id === selectedWeekId) ?? null,
@@ -112,6 +115,8 @@ export default function WeeksPage() {
       setWeeks(nextWeeks);
       setSelectedWeekId((current) => {
         if (nextWeeks.length === 0) {
+          setRoundsForGeneration("");
+          setGameCount(0);
           return null;
         }
 
@@ -119,6 +124,7 @@ export default function WeeksPage() {
           return current;
         }
 
+        setRoundsForGeneration("");
         return nextWeeks[nextWeeks.length - 1].id;
       });
     } catch (fetchError) {
@@ -234,13 +240,46 @@ export default function WeeksPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update rainy day setting");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to update rainy day setting");
       }
 
       await fetchWeeks();
     } catch (updateError) {
       console.error(updateError);
       setError("Misslyckades att uppdatera regndag-inställningen.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleWeekCompleteChange(weekCompleteValue: "yes" | "no") {
+    if (!selectedWeek) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/weeks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weekId: selectedWeek.id,
+          weekComplete: weekCompleteValue === "yes",
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to update week complete setting");
+      }
+
+      await fetchWeeks();
+    } catch (updateError) {
+      console.error(updateError);
+      setError(updateError instanceof Error ? updateError.message : "Misslyckades att uppdatera vecka klar-inställningen.");
     } finally {
       setLoading(false);
     }
@@ -329,7 +368,7 @@ export default function WeeksPage() {
 
         if (response.status === 409 && data.hasReportedResults) {
           const shouldReplace = window.confirm(
-            "There is already results reported. Do you want to delete those matches and create a new schedule?"
+            "Det finns redan registrerade resultat. Vill du radera dessa matcher och skapa ett nytt schema?"
           );
 
           if (!shouldReplace) {
@@ -655,13 +694,14 @@ export default function WeeksPage() {
                 {weeks.map((week) => (
                   <button
                     key={week.id}
-                    onClick={() => setSelectedWeekId(week.id)}
+                    onClick={() => selectWeek(week.id)}
                     className={`w-full px-6 py-4 text-left hover:bg-indigo-50 ${selectedWeek?.id === week.id ? "border-l-4 border-indigo-600 bg-indigo-100" : ""}`}
                   >
                     <div className="font-medium text-gray-900">Vecka {week.weekNumber}</div>
                     <div className="mt-1 text-xs text-gray-500">{new Date(week.startDate).toLocaleDateString("sv-SE")}</div>
                     <div className="mt-2 text-xs text-gray-600">{week.rounds} rundor • {week.participants.length} spelare</div>
                     <div className="mt-1 text-xs text-gray-600">Regndag: {week.rainyDay ? "Ja" : "Nej"}</div>
+                    <div className="mt-1 text-xs text-gray-600">Vecka klar: {week.weekComplete ? "Ja" : "Nej"}</div>
                   </button>
                 ))}
               </div>
@@ -698,6 +738,24 @@ export default function WeeksPage() {
                   <select
                     value={selectedWeek.rainyDay ? "yes" : "no"}
                     onChange={(event) => void handleRainyDayChange(event.target.value as "yes" | "no")}
+                    disabled={loading}
+                    className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                  >
+                    <option value="no">Nej</option>
+                    <option value="yes">Ja</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-white p-6 shadow-md">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">Vecka klar</h3>
+                    <p className="mt-1 text-sm text-gray-500">När en vecka markeras som klar låses alla matcher och resultat för veckan.</p>
+                  </div>
+                  <select
+                    value={selectedWeek.weekComplete ? "yes" : "no"}
+                    onChange={(event) => void handleWeekCompleteChange(event.target.value as "yes" | "no")}
                     disabled={loading}
                     className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                   >
@@ -745,6 +803,16 @@ export default function WeeksPage() {
                     </button>
                   </div>
 
+                  {calendarLoading && !calendarModalOpen && (
+                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+                      <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Spelare laddas...
+                    </div>
+                  )}
+
                   <div className="mt-6 space-y-3">
                     {selectedWeek.participants.length === 0 ? (
                       <p className="text-sm text-gray-500">Inga spelare tillagda ännu.</p>
@@ -780,6 +848,7 @@ export default function WeeksPage() {
                         value={roundsForGeneration}
                         onChange={(event) => setRoundsForGeneration(event.target.value)}
                         placeholder="Antal rundor *"
+                        disabled={selectedWeek.weekComplete}
                         className="w-44 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                       <Link href="/games" className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200">
@@ -788,7 +857,7 @@ export default function WeeksPage() {
                       <button
                         type="button"
                         onClick={() => void handleGenerateGames()}
-                        disabled={loading || selectedWeek.participants.length < 4 || !roundsForGeneration}
+                        disabled={loading || selectedWeek.weekComplete || selectedWeek.participants.length < 4 || !roundsForGeneration}
                         className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {loading ? "Arbetar..." : "Generera Matcher"}
@@ -797,8 +866,14 @@ export default function WeeksPage() {
                   </div>
 
                   <div className="rounded-lg bg-indigo-50 p-4 text-sm text-indigo-800">
-                    Minst 4 registrerade spelare krävs. Om antalet spelare inte går jämnt upp i fyra får spelare vila lika många rundor som möjligt.
+                    Minst 4 registrerade spelare krävs. Högst 16 spelare spelar per runda, vilket ger max fyra matcher. Övriga spelare hamnar på väntelistan.
                   </div>
+
+                  {selectedWeek.weekComplete && (
+                    <div className="mt-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+                      Veckan är markerad som klar. Matchschema och resultat är låsta.
+                    </div>
+                  )}
 
                   <div className="mt-6 flex justify-end">
                     <button

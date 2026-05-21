@@ -20,6 +20,8 @@ interface Week {
   weekNumber: number;
   startDate: string;
   rounds: number;
+  hasMatches?: boolean;
+  hasWeeklyStandings?: boolean;
 }
 
 function formatHalfValue(value: number) {
@@ -54,12 +56,19 @@ export default function StandingsPage() {
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch("/api/weeks");
+      const response = await fetch("/api/weeks?activity=1");
       const data = await response.json();
       const nextWeeks = Array.isArray(data) ? data : [];
       setWeeks(nextWeeks);
       if (nextWeeks.length > 0) {
-        setSelectedWeek(nextWeeks[nextWeeks.length - 1]);
+        const latestWithStandings = [...nextWeeks]
+          .reverse()
+          .find((week) => week.hasWeeklyStandings);
+        const latestWithMatches = [...nextWeeks]
+          .reverse()
+          .find((week) => week.hasMatches);
+
+        setSelectedWeek(latestWithStandings ?? latestWithMatches ?? nextWeeks[nextWeeks.length - 1]);
       }
     } catch (err) {
       console.error("Failed to fetch weeks:", err);

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860">
+  <rect width="1200" height="860" fill="#f8fafc"/>
+  <text x="600" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#0f172a">Felsokning snabbguide</text>
+
+  <rect x="430" y="90" width="340" height="90" rx="45" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="600" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#7f1d1d">Problem uppstatt</text>
+
+  <rect x="90" y="250" width="310" height="130" rx="12" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <text x="245" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#0c4a6e">Sidan laddar inte</text>
+  <text x="245" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#0c4a6e">Kontrollera dator + internet</text>
+  <text x="245" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#0c4a6e">Kontrollera Scheduled Tasks</text>
+
+  <rect x="445" y="250" width="310" height="130" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="600" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#14532d">Kan inte logga in</text>
+  <text x="600" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#14532d">Verifiera adminlank</text>
+  <text x="600" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#14532d">Kontrollera cookie/session</text>
+
+  <rect x="800" y="250" width="310" height="130" rx="12" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+  <text x="955" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#7c2d12">Fel tabell/poang</text>
+  <text x="955" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#7c2d12">Kontrollera matcheresultat</text>
+  <text x="955" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#7c2d12">Bygg om standings vid behov</text>
+
+  <rect x="90" y="500" width="1020" height="280" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="600" y="550" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#334155">Prioriterad atgardsordning</text>
+  <text x="140" y="595" font-family="Arial, sans-serif" font-size="18" fill="#334155">1. Oppna PowerShell och kontrollera att appen svarar lokalt pa http://localhost:3000.</text>
+  <text x="140" y="630" font-family="Arial, sans-serif" font-size="18" fill="#334155">2. Kontrollera tunneln och hamta aktuell URL/logg.</text>
+  <text x="140" y="665" font-family="Arial, sans-serif" font-size="18" fill="#334155">3. Bekrafta att veckan inte ar "klar" om ni behover redigera matcher.</text>
+  <text x="140" y="700" font-family="Arial, sans-serif" font-size="18" fill="#334155">4. Kontrollera databaskopplingen (DATABASE_URL) om API-fel uppstar.</text>
+  <text x="140" y="735" font-family="Arial, sans-serif" font-size="18" fill="#334155">5. Om allt fallerar: starta om BeachTour-Site och BeachTour-Tunnel.</text>
+
+  <g stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arr)">
+    <line x1="600" y1="180" x2="245" y2="250"/>
+    <line x1="600" y1="180" x2="600" y2="250"/>
+    <line x1="600" y1="180" x2="955" y2="250"/>
+  </g>
+
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>

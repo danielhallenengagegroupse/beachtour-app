@@ -71,6 +71,15 @@ export async function POST(request: NextRequest) {
         throw new Error("DAY_NOT_FOUND");
       }
 
+      const week = await tx.week.findUnique({
+        where: { id: day.weekId },
+        select: { weekComplete: true },
+      });
+
+      if (week?.weekComplete) {
+        throw new Error("WEEK_COMPLETE");
+      }
+
       const createdGame = await tx.game.create({
         data: {
           dayId: parsedDayId,
@@ -109,6 +118,9 @@ export async function POST(request: NextRequest) {
     console.error("Error creating game:", error);
     if (error instanceof Error && error.message === "DAY_NOT_FOUND") {
       return NextResponse.json({ error: "Day not found" }, { status: 404 });
+    }
+    if (error instanceof Error && error.message === "WEEK_COMPLETE") {
+      return NextResponse.json({ error: "Week is complete and matches are locked" }, { status: 409 });
     }
     return NextResponse.json(
       { error: "Failed to create game" },
