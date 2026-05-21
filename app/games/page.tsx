@@ -13,6 +13,9 @@ interface Week {
   weekNumber: number;
   startDate: string;
   rounds: number;
+  weekComplete: boolean;
+  hasMatches?: boolean;
+  hasWeeklyStandings?: boolean;
   days: Array<{ id: number; dayNumber: number }>;
   participants: Array<{ id: number; playerId: number; player: Player }>;
 }
@@ -96,7 +99,6 @@ export default function GamesPage() {
 
   useEffect(() => {
     if (!selectedWeekId) {
-      setGames([]);
       return;
     }
 
@@ -108,6 +110,8 @@ export default function GamesPage() {
     [selectedWeekId, weeks]
   );
 
+  const isWeekComplete = Boolean(selectedWeek?.weekComplete);
+
   const availablePlayers = useMemo(
     () => selectedWeek?.participants.map((participant) => participant.player) ?? [],
     [selectedWeek]
@@ -115,7 +119,8 @@ export default function GamesPage() {
 
   const maxRoundNumber = useMemo(() => {
     const maxGameRound = games.reduce((highest, game) => Math.max(highest, game.roundNumber), 0);
-    return Math.max(selectedWeek?.rounds ?? 0, maxGameRound, 1);
+    if (maxGameRound === 0) return 0;
+    return Math.max(selectedWeek?.rounds ?? 0, maxGameRound);
   }, [games, selectedWeek]);
 
   const hasUnsavedChanges = useMemo(() => {
@@ -161,25 +166,35 @@ export default function GamesPage() {
     });
   }, [games, maxRoundNumber, selectedWeek]);
 
-  useEffect(() => {
+  function selectWeek(weekId: number | null) {
+    setSelectedWeekId(weekId);
     setMatchEditorMode("closed");
     setEditingGameId(null);
-  }, [selectedWeekId]);
+  }
 
   async function fetchWeeks() {
     try {
-      const response = await fetch("/api/weeks");
+      const response = await fetch("/api/weeks?activity=1");
       const data = await response.json();
       const nextWeeks = Array.isArray(data) ? data : [];
       setWeeks(nextWeeks);
       setSelectedWeekId((current) => {
         if (nextWeeks.length === 0) {
+          setMatchEditorMode("closed");
+          setEditingGameId(null);
           return null;
         }
         if (current && nextWeeks.some((week) => week.id === current)) {
           return current;
         }
-        return nextWeeks[nextWeeks.length - 1].id;
+
+        const latestActiveWeek = [...nextWeeks]
+          .reverse()
+          .find((week) => week.hasMatches || week.hasWeeklyStandings);
+
+        setMatchEditorMode("closed");
+        setEditingGameId(null);
+        return latestActiveWeek?.id ?? nextWeeks[nextWeeks.length - 1].id;
       });
     } catch (fetchError) {
       console.error("Failed to fetch weeks:", fetchError);
@@ -226,6 +241,11 @@ export default function GamesPage() {
   }
 
   function beginAddMatch() {
+    if (isWeekComplete) {
+      setError("Veckan är markerad som klar. Matcher och resultat är låsta.");
+      return;
+    }
+
     const nextGameNumber = games.reduce((highest, game) => Math.max(highest, game.gameNumber), 0) + 1;
     setMatchEditorMode("create");
     setEditingGameId(null);
@@ -234,6 +254,11 @@ export default function GamesPage() {
   }
 
   function beginEditMatch(game: Game) {
+    if (isWeekComplete) {
+      setError("Veckan är markerad som klar. Matcher och resultat är låsta.");
+      return;
+    }
+
     setMatchEditorMode("edit");
     setEditingGameId(game.id);
     setMatchForm(createMatchFormFromGame(game));
@@ -248,6 +273,11 @@ export default function GamesPage() {
 
   async function handleSaveMatch() {
     if (!selectedWeek) {
+      return;
+    }
+
+    if (isWeekComplete) {
+      setError("Veckan är markerad som klar. Matcher och resultat är låsta.");
       return;
     }
 
@@ -320,6 +350,11 @@ export default function GamesPage() {
       return;
     }
 
+    if (isWeekComplete) {
+      setError("Veckan är markerad som klar. Matcher och resultat är låsta.");
+      return;
+    }
+
     if (!window.confirm("Vill du ta bort den här matchen?")) {
       return;
     }
@@ -349,6 +384,11 @@ export default function GamesPage() {
 
   async function handleSaveAllResults() {
     if (!selectedWeek) {
+      return;
+    }
+
+    if (isWeekComplete) {
+      setError("Veckan är markerad som klar. Matcher och resultat är låsta.");
       return;
     }
 
@@ -405,11 +445,13 @@ export default function GamesPage() {
           body: JSON.stringify({
             team1Score: draft.team1Score === "" ? null : Number(draft.team1Score),
             team2Score: draft.team2Score === "" ? null : Number(draft.team2Score),
+            deferStandingsRebuild: true,
           }),
         });
 
         if (!updateResponse.ok) {
-          throw new Error("Failed to update game");
+          const data = await updateResponse.json().catch(() => ({}));
+          throw new Error(data.error ?? "Failed to update game");
         }
       }
 
@@ -422,13 +464,14 @@ export default function GamesPage() {
       });
 
       if (!standingsResponse.ok) {
-        throw new Error("Failed to recalculate standings");
+        const data = await standingsResponse.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to recalculate standings");
       }
 
       await fetchGames(selectedWeek.id);
     } catch (saveError) {
       console.error(saveError);
-      setError("Misslyckades att spara resultaten.");
+      setError(saveError instanceof Error ? saveError.message : "Misslyckades att spara resultaten.");
     } finally {
       setLoading(false);
     }
@@ -446,7 +489,7 @@ export default function GamesPage() {
             <button
               type="button"
               onClick={beginAddMatch}
-              disabled={!selectedWeek}
+              disabled={!selectedWeek || isWeekComplete}
               className="rounded-lg bg-amber-500 px-4 py-2 font-medium text-white hover:bg-amber-400 disabled:opacity-50"
             >
               Lägg Till Match
@@ -454,7 +497,7 @@ export default function GamesPage() {
             <button
               type="button"
               onClick={() => void handleSaveAllResults()}
-              disabled={loading || !selectedWeek || games.length === 0 || !hasUnsavedChanges}
+              disabled={loading || !selectedWeek || isWeekComplete || games.length === 0 || !hasUnsavedChanges}
               className="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-white hover:bg-emerald-400 disabled:opacity-50"
             >
               {loading ? "Sparar..." : "Spara Alla Resultat"}
@@ -476,7 +519,7 @@ export default function GamesPage() {
           {weeks.map((week) => (
             <button
               key={week.id}
-              onClick={() => setSelectedWeekId(week.id)}
+              onClick={() => selectWeek(week.id)}
               className={`rounded-lg px-4 py-2 font-medium transition-colors ${
                 selectedWeekId === week.id ? "bg-indigo-600 text-white" : "bg-white text-gray-700 hover:bg-indigo-50"
               }`}
@@ -492,8 +535,14 @@ export default function GamesPage() {
           </div>
         )}
 
+        {selectedWeek && isWeekComplete && (
+          <div className="mb-6 rounded-lg bg-amber-50 p-4 text-amber-800 shadow-sm">
+            Veckan är markerad som klar. Alla matcher och resultat är låsta för redigering.
+          </div>
+        )}
+
         <div className="space-y-4">
-          {selectedWeek && matchEditorMode !== "closed" && (
+          {selectedWeek && !isWeekComplete && matchEditorMode !== "closed" && (
             <div className="rounded-lg bg-white p-6 shadow-md">
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -645,6 +694,7 @@ export default function GamesPage() {
                           <button
                             type="button"
                             onClick={() => beginEditMatch(game)}
+                            disabled={isWeekComplete}
                             className="rounded-lg bg-indigo-100 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-200"
                           >
                             Redigera
@@ -652,6 +702,7 @@ export default function GamesPage() {
                           <button
                             type="button"
                             onClick={() => void handleDeleteMatch(game.id)}
+                            disabled={isWeekComplete}
                             className="rounded-lg bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-200"
                           >
                             Ta Bort
@@ -670,6 +721,7 @@ export default function GamesPage() {
                           min="0"
                           value={scoreDrafts[game.id]?.team1Score ?? ""}
                           onChange={(event) => updateDraft(game.id, "team1Score", event.target.value)}
+                          disabled={isWeekComplete}
                           className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
 
@@ -683,6 +735,7 @@ export default function GamesPage() {
                           min="0"
                           value={scoreDrafts[game.id]?.team2Score ?? ""}
                           onChange={(event) => updateDraft(game.id, "team2Score", event.target.value)}
+                          disabled={isWeekComplete}
                           className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
