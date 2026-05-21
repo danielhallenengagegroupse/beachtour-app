@@ -152,27 +152,47 @@ async function discoverActivityUrl(weekDate: Date): Promise<string> {
 
   const html = await res.text();
 
-  // Find all activity links and check surrounding context for the target date + "Beach Tour"
-  const linkRe = /href="([^"]*\/aktivitet\/[^"]+)"/gi;
-  let m: RegExpExecArray | null;
+  // Find where this day appears as a calendar date cell: >19< or >19 Tis<
+  const dayStartRe = new RegExp(
+    `>\\s*0?${day}(?:\\s+(?:M\u00e5n|Tis|Ons|Tor|Fre|L\u00f6r|S\u00f6n))?\\s*<`,
+    "i"
+  );
+  const dayStartMatch = dayStartRe.exec(html);
 
-  while ((m = linkRe.exec(html)) !== null) {
-    const href = m[1];
-    const start = Math.max(0, m.index - 500);
-    const end = Math.min(html.length, m.index + 500);
-    const context = html.slice(start, end);
-
-    if (!/beach[\s-]*tour|summer[\s-]*beach/i.test(context)) continue;
-
-    // Match the day as a standalone number (not part of a larger number)
-    if (!new RegExp(`(?<![0-9])${day}(?![0-9])`).test(context)) continue;
-
-    return href.startsWith("http") ? href : `https://www.vkbjarke.se${href}`;
+  if (!dayStartMatch) {
+    throw new Error(
+      `Dag ${day} ${SV_MONTHS[month]} hittades inte i kalendern.`
+    );
   }
 
-  throw new Error(
-    `Inget Beach Tour-evenemang hittades den ${day} ${SV_MONTHS[month]} ${year} i kalendern.`
+  // Bound the search region: from this day's marker up to the next day's marker
+  const nextDay = day + 1;
+  const searchRegion = html.slice(dayStartMatch.index, dayStartMatch.index + 800);
+  const nextDayRe = new RegExp(
+    `>\\s*0?${nextDay}(?:\\s+(?:M\u00e5n|Tis|Ons|Tor|Fre|L\u00f6r|S\u00f6n))?\\s*<`,
+    "i"
   );
+  const nextDayMatch = nextDayRe.exec(searchRegion);
+  // Limit to current day's section; if last day of month, cap at 400 chars
+  const daySection = nextDayMatch
+    ? searchRegion.slice(0, nextDayMatch.index)
+    : searchRegion.slice(0, 400);
+
+  if (!/beach[\s-]*tour|summer[\s-]*beach/i.test(daySection)) {
+    throw new Error(
+      `Inget Beach Tour-evenemang hittades den ${day} ${SV_MONTHS[month]} ${year} i kalendern.`
+    );
+  }
+
+  const linkMatch = /href="([^"]*\/aktivitet\/[^"]+)"/i.exec(daySection);
+  if (!linkMatch) {
+    throw new Error(
+      `Inget Beach Tour-evenemang hittades den ${day} ${SV_MONTHS[month]} ${year} i kalendern.`
+    );
+  }
+
+  const href = linkMatch[1];
+  return href.startsWith("http") ? href : `https://www.vkbjarke.se${href}`;
 }
 
 export async function POST(request: NextRequest) {
