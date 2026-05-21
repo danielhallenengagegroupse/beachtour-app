@@ -157,11 +157,17 @@ export default function StandingsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {standings.map((standing, index) => (
+                    {standings.map((standing, index) => {
+                      const rank = index === 0 || standing.totalPoints !== standings[index - 1].totalPoints
+                        ? index + 1
+                        : standings
+                            .slice(0, index)
+                            .findIndex((s) => s.totalPoints === standing.totalPoints) + 1;
+                      return (
                       <tr key={standing.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-sm font-bold text-gray-900">
                           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white">
-                            {index + 1}
+                            {rank}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
@@ -185,7 +191,8 @@ export default function StandingsPage() {
                           </span>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
