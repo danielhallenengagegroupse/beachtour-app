@@ -102,7 +102,7 @@ export default function StandingsPage() {
               Till Matcher
             </Link>
             <Link href="/public" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
-              ← Till Publik Startsida
+              ← Startsida
             </Link>
           </div>
         </div>

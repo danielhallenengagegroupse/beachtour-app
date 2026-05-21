@@ -57,7 +57,7 @@ export default function SeasonStandingsPage() {
             <p className="text-indigo-100 mt-2">Totalt ställning för hela säsongen</p>
           </div>
           <Link href="/public" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
-            ← Till Publik Startsida
+            ← Startsida
           </Link>
         </div>
       </header>
