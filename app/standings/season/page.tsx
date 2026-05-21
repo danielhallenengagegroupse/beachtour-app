@@ -62,7 +62,7 @@ export default function SeasonStandingsPage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Standings Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {loading ? (
@@ -74,14 +74,14 @@ export default function SeasonStandingsPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Position</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Spelare</th>
+                    <th className="px-3 py-3 text-left text-xs font-bold text-gray-700">Pos</th>
+                    <th className="px-3 py-3 text-left text-xs font-bold text-gray-700">Spelare</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-gray-700">Totalt</th>
                     {weeks.map((week) => (
-                      <th key={week.id} className="px-4 py-4 text-center text-sm font-bold text-gray-700 whitespace-nowrap">
-                        Vecka {week.weekNumber}
+                      <th key={week.id} className="px-2 py-3 text-center text-xs font-bold text-gray-700 whitespace-nowrap">
+                        V{week.weekNumber}
                       </th>
                     ))}
-                    <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Total Poäng</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -101,31 +101,29 @@ export default function SeasonStandingsPage() {
                           rank <= 3 ? "bg-yellow-50" : ""
                         }`}
                       >
-                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600 text-white font-bold">
-                              {medalEmoji || rank}
-                            </div>
+                        <td className="px-3 py-3 text-sm font-bold text-gray-900">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs">
+                            {medalEmoji || rank}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        <td className="px-3 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                           {standing.player.name}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm">
+                            {standing.totalPoints}
+                          </span>
                         </td>
                         {standing.weekPoints.map((points, pointsIndex) => (
                           <td
                             key={`${standing.playerId}-${pointsIndex}`}
-                            className={`px-4 py-4 text-center text-sm font-medium ${
+                            className={`px-2 py-3 text-center text-sm font-medium ${
                               standing.droppedWeekIndexes.includes(pointsIndex) ? "text-red-600" : "text-gray-700"
                             }`}
                           >
                             {points}
                           </td>
                         ))}
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-lg">
-                            {standing.totalPoints}
-                          </span>
-                        </td>
                       </tr>
                     );
                   })}
