@@ -94,7 +94,7 @@ export default function StandingsPage() {
       <header className="bg-indigo-600 text-white shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">🎯 Veckornas Ställning</h1>
+            <h1 className="text-3xl font-bold">🎯 Resultat per vecka</h1>
             <p className="text-indigo-100 mt-2">Se veckans rankingar och poäng</p>
           </div>
           <div className="flex gap-3">
