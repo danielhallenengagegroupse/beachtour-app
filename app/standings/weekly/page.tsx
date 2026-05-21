@@ -131,13 +131,6 @@ export default function StandingsPage() {
         {/* Standings Table */}
         {selectedWeek && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-8 py-6 bg-indigo-600 text-white">
-              <h2 className="text-2xl font-bold">Vecka {selectedWeek.weekNumber} Ställning</h2>
-              <p className="text-indigo-100 text-sm mt-1">
-                {new Date(selectedWeek.startDate).toLocaleDateString("sv-SE")} • {selectedWeek.rounds} rundor
-              </p>
-            </div>
-
             {loading ? (
               <div className="p-12 text-center text-gray-500">Laddar ställning...</div>
             ) : standings.length === 0 ? (
