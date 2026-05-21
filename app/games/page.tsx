@@ -483,7 +483,6 @@ export default function GamesPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
           <div>
             <h1 className="text-3xl font-bold">🎮 Matcher</h1>
-            <p className="mt-2 text-indigo-100">Se auto-genererade rundor och registrera ett set-resultat per match.</p>
           </div>
           <div className="flex gap-3">
             <button
