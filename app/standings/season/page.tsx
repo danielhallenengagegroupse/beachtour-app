@@ -91,22 +91,25 @@ export default function SeasonStandingsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {standings.map((standing, index) => {
+                    const rank = index === 0 || standing.totalPoints !== standings[index - 1].totalPoints
+                      ? index + 1
+                      : standings.slice(0, index).findIndex((s) => s.totalPoints === standing.totalPoints) + 1;
                     let medalEmoji = "";
-                    if (index === 0) medalEmoji = "🥇";
-                    else if (index === 1) medalEmoji = "🥈";
-                    else if (index === 2) medalEmoji = "🥉";
+                    if (rank === 1) medalEmoji = "🥇";
+                    else if (rank === 2) medalEmoji = "🥈";
+                    else if (rank === 3) medalEmoji = "🥉";
 
                     return (
                       <tr
                         key={standing.playerId}
                         className={`hover:bg-gray-50 ${
-                          index < 3 ? "bg-yellow-50" : ""
+                          rank <= 3 ? "bg-yellow-50" : ""
                         }`}
                       >
                         <td className="px-6 py-4 text-sm font-bold text-gray-900">
                           <div className="flex items-center gap-2">
                             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600 text-white font-bold">
-                              {medalEmoji || index + 1}
+                              {medalEmoji || rank}
                             </div>
                           </div>
                         </td>
