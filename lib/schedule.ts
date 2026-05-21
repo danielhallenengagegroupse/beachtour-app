@@ -57,9 +57,28 @@ function scoreGame(game: GeneratedGame, teammateCounts: Counts, opponentCounts: 
 }
 
 function chooseBestPairing(group: [number, number, number, number], teammateCounts: Counts, opponentCounts: Counts) {
-  return getPairings(group).sort(
-    (left, right) => scoreGame(left, teammateCounts, opponentCounts) - scoreGame(right, teammateCounts, opponentCounts)
-  )[0];
+  const pairings = getPairings(group);
+
+  let bestPairing = pairings[0];
+  let bestScore = scoreGame(bestPairing, teammateCounts, opponentCounts);
+
+  for (let index = 1; index < pairings.length; index++) {
+    const candidate = pairings[index];
+    const candidateScore = scoreGame(candidate, teammateCounts, opponentCounts);
+
+    if (candidateScore < bestScore || (candidateScore === bestScore && Math.random() < 0.5)) {
+      bestPairing = candidate;
+      bestScore = candidateScore;
+    }
+  }
+
+  return bestPairing;
+}
+
+function totalGroupInteraction(group: [number, number, number, number], teammateCounts: Counts, opponentCounts: Counts): number {
+  const [a, b, c, d] = group;
+  const pairs: [number, number][] = [[a, b], [a, c], [a, d], [b, c], [b, d], [c, d]];
+  return pairs.reduce((sum, [x, y]) => sum + getCount(teammateCounts, x, y) + getCount(opponentCounts, x, y), 0);
 }
 
 function combinations(values: number[], size: number): number[][] {
@@ -85,12 +104,34 @@ function combinations(values: number[], size: number): number[][] {
 function chooseBestGroup(available: number[], teammateCounts: Counts, opponentCounts: Counts) {
   const allGroups = combinations(available, 4);
 
-  return allGroups.sort((left, right) => {
-    const leftPairing = chooseBestPairing(left as [number, number, number, number], teammateCounts, opponentCounts);
-    const rightPairing = chooseBestPairing(right as [number, number, number, number], teammateCounts, opponentCounts);
+  let bestGroup = allGroups[0] as [number, number, number, number];
+  let bestPairing = chooseBestPairing(bestGroup, teammateCounts, opponentCounts);
+  let bestScore = scoreGame(bestPairing, teammateCounts, opponentCounts);
 
-    return scoreGame(leftPairing, teammateCounts, opponentCounts) - scoreGame(rightPairing, teammateCounts, opponentCounts);
-  })[0] as [number, number, number, number];
+  for (let index = 1; index < allGroups.length; index++) {
+    const candidateGroup = allGroups[index] as [number, number, number, number];
+    const candidatePairing = chooseBestPairing(candidateGroup, teammateCounts, opponentCounts);
+    const candidateScore = scoreGame(candidatePairing, teammateCounts, opponentCounts);
+
+    if (candidateScore < bestScore) {
+      bestGroup = candidateGroup;
+      bestPairing = candidatePairing;
+      bestScore = candidateScore;
+      continue;
+    }
+
+    if (candidateScore === bestScore) {
+      const candidateInteraction = totalGroupInteraction(candidateGroup, teammateCounts, opponentCounts);
+      const bestInteraction = totalGroupInteraction(bestGroup, teammateCounts, opponentCounts);
+
+      if (candidateInteraction < bestInteraction || (candidateInteraction === bestInteraction && Math.random() < 0.5)) {
+        bestGroup = candidateGroup;
+        bestPairing = candidatePairing;
+      }
+    }
+  }
+
+  return bestGroup;
 }
 
 function scoreRestGroup(
@@ -143,24 +184,100 @@ function chooseRestingPlayers(
     return [];
   }
 
-  return combinations(playerIds, restSlots)
-    .sort((left, right) => {
-      const scoreDiff =
-        scoreRestGroup(playerIds, left, restSlots, restCounts, lastRestRound, restPairCounts) -
-        scoreRestGroup(playerIds, right, restSlots, restCounts, lastRestRound, restPairCounts);
+  if (restSlots <= 6) {
+    return combinations(playerIds, restSlots)
+      .sort((left, right) => {
+        const scoreDiff =
+          scoreRestGroup(playerIds, left, restSlots, restCounts, lastRestRound, restPairCounts) -
+          scoreRestGroup(playerIds, right, restSlots, restCounts, lastRestRound, restPairCounts);
 
-      if (scoreDiff !== 0) {
-        return scoreDiff;
-      }
-
-      for (let index = 0; index < left.length; index++) {
-        if (left[index] !== right[index]) {
-          return left[index] - right[index];
+        if (scoreDiff !== 0) {
+          return scoreDiff;
         }
-      }
 
-      return 0;
-    })[0];
+        for (let index = 0; index < left.length; index++) {
+          if (left[index] !== right[index]) {
+            return left[index] - right[index];
+          }
+        }
+
+        return 0;
+      })[0];
+  }
+
+  const selected: number[] = [];
+  const remaining = [...playerIds];
+
+  while (selected.length < restSlots && remaining.length > 0) {
+    let bestPlayerId = remaining[0];
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (const candidatePlayerId of remaining) {
+      const candidateRestCount = (restCounts.get(candidatePlayerId) ?? 0) + 1;
+      const candidateLastRestRound = lastRestRound.get(candidatePlayerId) ?? -1;
+      const candidatePairPenalty = selected.reduce(
+        (sum, selectedPlayerId) => sum + getCount(restPairCounts, candidatePlayerId, selectedPlayerId),
+        0
+      );
+      const candidateScore = candidateRestCount * 1000 + candidatePairPenalty * 100 + candidateLastRestRound;
+
+      if (candidateScore < bestScore || (candidateScore === bestScore && candidatePlayerId < bestPlayerId)) {
+        bestPlayerId = candidatePlayerId;
+        bestScore = candidateScore;
+      }
+    }
+
+    selected.push(bestPlayerId);
+    const index = remaining.indexOf(bestPlayerId);
+    if (index >= 0) {
+      remaining.splice(index, 1);
+    }
+  }
+
+  return selected.sort((left, right) => left - right);
+}
+
+function permutations(arr: number[]): number[][] {
+  if (arr.length <= 1) return [arr.slice()];
+  const result: number[][] = [];
+  for (let i = 0; i < arr.length; i++) {
+    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
+    for (const perm of permutations(rest)) {
+      result.push([arr[i], ...perm]);
+    }
+  }
+  return result;
+}
+
+function scoreCourtAssignment(games: GeneratedGame[], perm: number[], courtCounts: Map<number, number[]>): number {
+  let score = 0;
+  for (let courtIndex = 0; courtIndex < perm.length; courtIndex++) {
+    const game = games[perm[courtIndex]];
+    for (const playerId of [game.team1[0], game.team1[1], game.team2[0], game.team2[1]]) {
+      const counts = courtCounts.get(playerId);
+      score += counts?.[courtIndex] ?? 0;
+    }
+  }
+  return score;
+}
+
+function assignCourts(games: GeneratedGame[], courtCounts: Map<number, number[]>): GeneratedGame[] {
+  if (games.length <= 1) return games;
+  const indices = Array.from({ length: games.length }, (_, i) => i);
+  const perms = permutations(indices);
+
+  let bestPerm = perms[0];
+  let bestScore = scoreCourtAssignment(games, perms[0], courtCounts);
+
+  for (let i = 1; i < perms.length; i++) {
+    const score = scoreCourtAssignment(games, perms[i], courtCounts);
+    if (score < bestScore || (score === bestScore && Math.random() < 0.5)) {
+      bestScore = score;
+      bestPerm = perms[i];
+    }
+  }
+
+  return bestPerm.map((gameIndex) => games[gameIndex]);
 }
 
 function applyGameHistory(game: GeneratedGame, teammateCounts: Counts, opponentCounts: Counts) {
@@ -187,11 +304,13 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
   const restCounts = new Map<number, number>();
   const restPairCounts = new Map<string, number>();
   const lastRestRound = new Map<number, number>();
-  const restSlots = playerIds.length % 4;
+  const courtCounts = new Map<number, number[]>();
+  const restSlots = playerIds.length > 16 ? playerIds.length - 16 : playerIds.length % 4;
   const schedule: GeneratedRound[] = [];
 
   for (const playerId of playerIds) {
     restCounts.set(playerId, 0);
+    courtCounts.set(playerId, []);
   }
 
   for (let roundNumber = 1; roundNumber <= rounds; roundNumber++) {
@@ -223,10 +342,21 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
       }
     }
 
+    const assignedGames = assignCourts(games, courtCounts);
+
+    for (let courtIndex = 0; courtIndex < assignedGames.length; courtIndex++) {
+      const game = assignedGames[courtIndex];
+      for (const playerId of [game.team1[0], game.team1[1], game.team2[0], game.team2[1]]) {
+        const counts = courtCounts.get(playerId)!;
+        while (counts.length <= courtIndex) counts.push(0);
+        counts[courtIndex]++;
+      }
+    }
+
     schedule.push({
       roundNumber,
       restingPlayerIds,
-      games,
+      games: assignedGames,
     });
   }
 
