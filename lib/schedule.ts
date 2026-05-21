@@ -47,15 +47,16 @@ function scoreGame(game: GeneratedGame, teammateCounts: Counts, opponentCounts: 
     getCount(teammateCounts, game.team1[0], game.team1[1]) +
     getCount(teammateCounts, game.team2[0], game.team2[1]);
 
-  // Quadratic penalty: going from count 2→3 costs 5× more than 0→1, strongly discouraging repeat encounters.
   const c1 = getCount(opponentCounts, game.team1[0], game.team2[0]);
   const c2 = getCount(opponentCounts, game.team1[0], game.team2[1]);
   const c3 = getCount(opponentCounts, game.team1[1], game.team2[0]);
   const c4 = getCount(opponentCounts, game.team1[1], game.team2[1]);
-  const opponentPenalty = c1 * c1 + c2 * c2 + c3 * c3 + c4 * c4;
+  // Quadratic for count ≤ 2; near-prohibitive (10 000) for count ≥ 3.
+  // This prevents a 4th opponent encounter even at the cost of a repeated teammate,
+  // while keeping teammate weight (100) dominant over normal quadratic penalties (max 4).
+  const op = (c: number) => c >= 3 ? 10_000 : c * c;
+  const opponentPenalty = op(c1) + op(c2) + op(c3) + op(c4);
 
-  // Teammate weight 100 ensures teammate balance always dominates over opponent distribution,
-  // even when all 4 opponent pairs in a game are at high counts (e.g. 4×count²=36 < 100).
   return teammatePenalty * 100 + opponentPenalty;
 }
 
