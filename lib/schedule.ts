@@ -54,7 +54,9 @@ function scoreGame(game: GeneratedGame, teammateCounts: Counts, opponentCounts: 
   const c4 = getCount(opponentCounts, game.team1[1], game.team2[1]);
   const opponentPenalty = c1 * c1 + c2 * c2 + c3 * c3 + c4 * c4;
 
-  return teammatePenalty * 10 + opponentPenalty;
+  // Teammate weight 100 ensures teammate balance always dominates over opponent distribution,
+  // even when all 4 opponent pairs in a game are at high counts (e.g. 4×count²=36 < 100).
+  return teammatePenalty * 100 + opponentPenalty;
 }
 
 function chooseBestPairing(group: [number, number, number, number], teammateCounts: Counts, opponentCounts: Counts) {
