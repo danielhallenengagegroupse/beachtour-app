@@ -504,7 +504,7 @@ export default function GamesPage() {
             <Link href="/standings/weekly" className="rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400">
               Till Veckoställning
             </Link>
-            <Link href="/" className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50">
+            <Link href="https://beachtour.vkbjarke.se/public" className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50">
               ← Till Startsidan
             </Link>
           </div>
