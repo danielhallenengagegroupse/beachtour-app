@@ -131,22 +131,76 @@ async function fetchWithSession(activityUrl: string): Promise<string> {
   return activityRes.text();
 }
 
+const SV_MONTHS = [
+  "januari", "februari", "mars", "april", "maj", "juni",
+  "juli", "augusti", "september", "oktober", "november", "december",
+];
+
+const CALENDAR_BASE = "https://www.vkbjarke.se/vkbjarke-beachvolleysenior2026";
+
+async function discoverActivityUrl(weekDate: Date): Promise<string> {
+  const year = weekDate.getUTCFullYear();
+  const month = weekDate.getUTCMonth();
+  const day = weekDate.getUTCDate();
+
+  const calendarUrl = `${CALENDAR_BASE}/kalender/${year}/${SV_MONTHS[month]}`;
+  const res = await fetch(calendarUrl, { headers: { "User-Agent": "BeachTour/1.0" } });
+
+  if (!res.ok) {
+    throw new Error(`Kunde inte hämta kalendern (HTTP ${res.status}).`);
+  }
+
+  const html = await res.text();
+
+  // Find all activity links and check surrounding context for the target date + "Beach Tour"
+  const linkRe = /href="([^"]*\/aktivitet\/[^"]+)"/gi;
+  let m: RegExpExecArray | null;
+
+  while ((m = linkRe.exec(html)) !== null) {
+    const href = m[1];
+    const start = Math.max(0, m.index - 500);
+    const end = Math.min(html.length, m.index + 500);
+    const context = html.slice(start, end);
+
+    if (!/beach[\s-]*tour|summer[\s-]*beach/i.test(context)) continue;
+
+    // Match the day as a standalone number (not part of a larger number)
+    if (!new RegExp(`(?<![0-9])${day}(?![0-9])`).test(context)) continue;
+
+    return href.startsWith("http") ? href : `https://www.vkbjarke.se${href}`;
+  }
+
+  throw new Error(
+    `Inget Beach Tour-evenemang hittades den ${day} ${SV_MONTHS[month]} ${year} i kalendern.`
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { activityUrl } = await request.json();
+    const body = await request.json();
+    const { activityUrl, weekDate } = body as { activityUrl?: string; weekDate?: string };
 
-    if (!activityUrl || typeof activityUrl !== "string") {
-      return NextResponse.json({ error: "activityUrl saknas." }, { status: 400 });
+    let resolvedUrl: string;
+
+    if (weekDate) {
+      const date = new Date(weekDate);
+      if (Number.isNaN(date.getTime())) {
+        return NextResponse.json({ error: "Ogiltigt datum." }, { status: 400 });
+      }
+      resolvedUrl = await discoverActivityUrl(date);
+    } else if (activityUrl && typeof activityUrl === "string") {
+      if (!isAllowedCalendarUrl(activityUrl)) {
+        return NextResponse.json(
+          { error: "Ogiltig URL. Ange en aktivitetslänk från vkbjarke.se." },
+          { status: 400 }
+        );
+      }
+      resolvedUrl = activityUrl;
+    } else {
+      return NextResponse.json({ error: "activityUrl eller weekDate krävs." }, { status: 400 });
     }
 
-    if (!isAllowedCalendarUrl(activityUrl)) {
-      return NextResponse.json(
-        { error: "Ogiltig URL. Ange en aktivitetslänk från vkbjarke.se." },
-        { status: 400 }
-      );
-    }
-
-    const html = await fetchWithSession(activityUrl);
+    const html = await fetchWithSession(resolvedUrl);
     const names = extractAttendeesFromHtml(html);
 
     return NextResponse.json({ names });

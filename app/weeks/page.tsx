@@ -55,8 +55,6 @@ export default function WeeksPage() {
   const [error, setError] = useState("");
 
   // Calendar import state
-  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-  const [calendarUrl, setCalendarUrl] = useState("");
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarError, setCalendarError] = useState("");
   const [unknownPlayerPrompt, setUnknownPlayerPrompt] = useState<UnknownPlayerPrompt | null>(null);
@@ -381,8 +379,8 @@ export default function WeeksPage() {
     }
   }
 
-  async function handleCalendarImport() {
-    if (!selectedWeek || !calendarUrl.trim()) {
+  async function handleAutoImportFromCalendar() {
+    if (!selectedWeek) {
       return;
     }
 
@@ -393,7 +391,7 @@ export default function WeeksPage() {
       const response = await fetch("/api/calendar-participants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activityUrl: calendarUrl.trim() }),
+        body: JSON.stringify({ weekDate: selectedWeek.startDate }),
       });
 
       const data = await response.json();
@@ -405,14 +403,11 @@ export default function WeeksPage() {
       const importedNames: string[] = Array.isArray(data.names) ? data.names : [];
 
       if (importedNames.length === 0) {
-        setCalendarError("Inga anmälda deltagare hittades på den angivna aktivitetssidan.");
+        setCalendarError("Inga anmälda deltagare hittades för veckans datum i kalendern.");
         setCalendarLoading(false);
         return;
       }
 
-      setCalendarModalOpen(false);
-      setCalendarUrl("");
-      // Start processing the names one at a time
       await processImportedNames(importedNames);
     } catch (importError) {
       setCalendarError(importError instanceof Error ? importError.message : "Okänt fel.");
@@ -680,20 +675,27 @@ export default function WeeksPage() {
                   <div className="mt-3">
                     <button
                       type="button"
-                      onClick={() => { setCalendarModalOpen(true); setCalendarError(""); }}
-                      className="w-full rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+                      onClick={() => { setCalendarError(""); void handleAutoImportFromCalendar(); }}
+                      disabled={calendarLoading}
+                      className="w-full rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
                     >
-                      📅 Importera från kalender
+                      📅 Hämta deltagare
                     </button>
                   </div>
 
-                  {calendarLoading && !calendarModalOpen && (
+                  {calendarLoading && (
                     <div className="mt-3 flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
                       <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Spelare laddas...
+                      Söker i kalender...
+                    </div>
+                  )}
+
+                  {calendarError && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {calendarError}
                     </div>
                   )}
 
@@ -776,46 +778,6 @@ export default function WeeksPage() {
         </div>
       </div>
     </main>
-
-    {/* Calendar import URL modal */}
-    {calendarModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="w-full max-w-lg rounded-xl bg-white p-8 shadow-2xl">
-          <h2 className="mb-2 text-xl font-bold text-gray-900">Importera från kalender</h2>
-          <p className="mb-5 text-sm text-gray-500">
-            Klistra in länken till en aktivitet på VK Bjärkes kalender (t.ex. Bjärke Summer Beach Tour 2026).
-            Deltagare som svarat &quot;Kommer&quot; läggs till i veckan.
-          </p>
-          <input
-            type="url"
-            value={calendarUrl}
-            onChange={(e) => setCalendarUrl(e.target.value)}
-            placeholder="https://www.vkbjarke.se/...aktivitet/..."
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          {calendarError && (
-            <p className="mt-3 text-sm text-red-600">{calendarError}</p>
-          )}
-          <div className="mt-5 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => { setCalendarModalOpen(false); setCalendarUrl(""); setCalendarError(""); }}
-              className="rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Avbryt
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleCalendarImport()}
-              disabled={calendarLoading || !calendarUrl.trim()}
-              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {calendarLoading ? "Hämtar..." : "Importera"}
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
 
     {/* Unknown player confirmation modal */}
     {unknownPlayerPrompt && (
