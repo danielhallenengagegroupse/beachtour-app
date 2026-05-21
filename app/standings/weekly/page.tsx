@@ -108,7 +108,7 @@ export default function StandingsPage() {
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-xl mx-auto px-4 py-8">
         {/* Week Selection */}
         <div className="mb-8">
           <div className="flex gap-2 flex-wrap">
