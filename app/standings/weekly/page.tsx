@@ -108,7 +108,7 @@ export default function StandingsPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Week Selection */}
         <div className="mb-8">
           <div className="flex gap-2 flex-wrap">
@@ -140,13 +140,13 @@ export default function StandingsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Position</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Spelare</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Matcher Spelade</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Vinster</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Förluster</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Vinst %</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Total Poäng</th>
+                      <th className="px-3 py-3 text-left text-xs font-bold text-gray-700">Pos</th>
+                      <th className="px-3 py-3 text-left text-xs font-bold text-gray-700">Spelare</th>
+                      <th className="px-3 py-3 text-center text-xs font-bold text-gray-700">Matcher</th>
+                      <th className="px-3 py-3 text-center text-xs font-bold text-gray-700">Vinster</th>
+                      <th className="px-3 py-3 text-center text-xs font-bold text-gray-700">Förluster</th>
+                      <th className="px-3 py-3 text-center text-xs font-bold text-gray-700">Vinst %</th>
+                      <th className="px-3 py-3 text-center text-xs font-bold text-gray-700">Poäng</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -158,28 +158,28 @@ export default function StandingsPage() {
                             .findIndex((s) => s.totalPoints === standing.totalPoints) + 1;
                       return (
                       <tr key={standing.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white">
+                        <td className="px-3 py-3 text-sm font-bold text-gray-900">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-600 text-white text-xs">
                             {rank}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        <td className="px-3 py-3 text-sm font-medium text-gray-900">
                           {standing.player.name}
                         </td>
-                        <td className="px-6 py-4 text-center text-sm text-gray-600">
+                        <td className="px-3 py-3 text-center text-sm text-gray-600">
                           {standing.gamesPlayed}
                         </td>
-                        <td className="px-6 py-4 text-center text-sm text-green-600 font-medium">
+                        <td className="px-3 py-3 text-center text-sm text-green-600 font-medium">
                           {formatHalfValue(standing.wins)}
                         </td>
-                        <td className="px-6 py-4 text-center text-sm text-red-600 font-medium">
+                        <td className="px-3 py-3 text-center text-sm text-red-600 font-medium">
                           {formatHalfValue(standing.losses)}
                         </td>
-                        <td className="px-6 py-4 text-center text-sm text-indigo-700 font-semibold">
+                        <td className="px-3 py-3 text-center text-sm text-indigo-700 font-semibold">
                           {formatPercentage(standing.winPercentage)}
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                        <td className="px-3 py-3 text-center">
+                          <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm">
                             {standing.totalPoints}
                           </span>
                         </td>
