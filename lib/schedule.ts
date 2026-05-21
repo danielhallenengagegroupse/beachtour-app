@@ -194,24 +194,15 @@ function chooseRestingPlayers(
   }
 
   if (restSlots <= 6) {
-    return combinations(playerIds, restSlots)
-      .sort((left, right) => {
-        const scoreDiff =
-          scoreRestGroup(playerIds, left, restSlots, restCounts, lastRestRound, restPairCounts) -
-          scoreRestGroup(playerIds, right, restSlots, restCounts, lastRestRound, restPairCounts);
-
-        if (scoreDiff !== 0) {
-          return scoreDiff;
-        }
-
-        for (let index = 0; index < left.length; index++) {
-          if (left[index] !== right[index]) {
-            return left[index] - right[index];
-          }
-        }
-
-        return 0;
-      })[0];
+    // Score all combinations, then randomly pick among those tied for the best score.
+    // This lets each restart attempt explore a different rest structure.
+    const scored = combinations(playerIds, restSlots).map((combo) => ({
+      combo,
+      score: scoreRestGroup(playerIds, combo, restSlots, restCounts, lastRestRound, restPairCounts),
+    }));
+    const minScore = Math.min(...scored.map((s) => s.score));
+    const best = scored.filter((s) => s.score === minScore);
+    return best[Math.floor(Math.random() * best.length)].combo;
   }
 
   const selected: number[] = [];
@@ -230,7 +221,7 @@ function chooseRestingPlayers(
       );
       const candidateScore = candidateRestCount * 1000 + candidatePairPenalty * 100 + candidateLastRestRound;
 
-      if (candidateScore < bestScore || (candidateScore === bestScore && candidatePlayerId < bestPlayerId)) {
+      if (candidateScore < bestScore || (candidateScore === bestScore && Math.random() < 0.5)) {
         bestPlayerId = candidatePlayerId;
         bestScore = candidateScore;
       }
@@ -310,7 +301,7 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
 
   // Run multiple independent attempts (each differs due to random tiebreaking)
   // and return the one with the most balanced opponent distribution.
-  const ATTEMPTS = 15;
+  const ATTEMPTS = 30;
   let best = generateScheduleAttempt(playerIds, rounds);
   let bestScore = scoreScheduleQuality(best);
   for (let i = 1; i < ATTEMPTS; i++) {
