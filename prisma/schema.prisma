@@ -66,7 +66,7 @@ model Day {
   id        Int     @id @default(autoincrement())
   weekId    Int
   dayNumber Int
-  date      DateTime @unique
+  date      DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
