@@ -47,13 +47,14 @@ function scoreGame(game: GeneratedGame, teammateCounts: Counts, opponentCounts: 
     getCount(teammateCounts, game.team1[0], game.team1[1]) +
     getCount(teammateCounts, game.team2[0], game.team2[1]);
 
-  const opponentPenalty =
-    getCount(opponentCounts, game.team1[0], game.team2[0]) +
-    getCount(opponentCounts, game.team1[0], game.team2[1]) +
-    getCount(opponentCounts, game.team1[1], game.team2[0]) +
-    getCount(opponentCounts, game.team1[1], game.team2[1]);
+  // Quadratic penalty: going from count 2→3 costs 5× more than 0→1, strongly discouraging repeat encounters.
+  const c1 = getCount(opponentCounts, game.team1[0], game.team2[0]);
+  const c2 = getCount(opponentCounts, game.team1[0], game.team2[1]);
+  const c3 = getCount(opponentCounts, game.team1[1], game.team2[0]);
+  const c4 = getCount(opponentCounts, game.team1[1], game.team2[1]);
+  const opponentPenalty = c1 * c1 + c2 * c2 + c3 * c3 + c4 * c4;
 
-  return teammatePenalty * 10 + opponentPenalty * 2;
+  return teammatePenalty * 10 + opponentPenalty;
 }
 
 function chooseBestPairing(group: [number, number, number, number], teammateCounts: Counts, opponentCounts: Counts) {
@@ -305,6 +306,40 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
     throw new Error("At least 1 round is required.");
   }
 
+  // Run multiple independent attempts (each differs due to random tiebreaking)
+  // and return the one with the most balanced opponent distribution.
+  const ATTEMPTS = 15;
+  let best = generateScheduleAttempt(playerIds, rounds);
+  let bestScore = scoreOpponentDistribution(best);
+  for (let i = 1; i < ATTEMPTS; i++) {
+    const candidate = generateScheduleAttempt(playerIds, rounds);
+    const score = scoreOpponentDistribution(candidate);
+    if (score < bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+// Score a completed schedule by sum-of-squares of opponent encounter counts.
+// Lower = more balanced distribution (all-2s would be the global minimum).
+function scoreOpponentDistribution(schedule: GeneratedRound[]): number {
+  const opponentCounts = new Map<string, number>();
+  for (const round of schedule) {
+    for (const game of round.games) {
+      incrementCount(opponentCounts, game.team1[0], game.team2[0]);
+      incrementCount(opponentCounts, game.team1[0], game.team2[1]);
+      incrementCount(opponentCounts, game.team1[1], game.team2[0]);
+      incrementCount(opponentCounts, game.team1[1], game.team2[1]);
+    }
+  }
+  let score = 0;
+  for (const count of opponentCounts.values()) score += count * count;
+  return score;
+}
+
+function generateScheduleAttempt(playerIds: number[], rounds: number): GeneratedRound[] {
   const teammateCounts = new Map<string, number>();
   const opponentCounts = new Map<string, number>();
   const restCounts = new Map<number, number>();
