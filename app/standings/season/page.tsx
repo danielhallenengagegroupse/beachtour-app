@@ -65,11 +65,6 @@ export default function SeasonStandingsPage() {
       <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Standings Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-            <h2 className="text-3xl font-bold">🏐 Säsongens Slutställning</h2>
-            <p className="text-indigo-100 text-sm mt-2">Sommaren 2026 Beachvolley Tour</p>
-          </div>
-
           {loading ? (
             <div className="p-12 text-center text-gray-500">Laddar ställning...</div>
           ) : standings.length === 0 ? (
