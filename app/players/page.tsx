@@ -100,7 +100,7 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold">👥 Spelare</h1>
             <p className="text-indigo-100 mt-2">Registrera och hantera spelare</p>
           </div>
-          <Link href="/" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
+            <Link href="https://beachtour.vkbjarke.se/admin" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
             ← Till Startsidan
           </Link>
         </div>
