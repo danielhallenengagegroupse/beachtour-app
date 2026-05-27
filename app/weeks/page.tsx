@@ -412,7 +412,6 @@ export default function WeeksPage() {
       await processImportedNames(importedNames);
     } catch (importError) {
       setCalendarError(importError instanceof Error ? importError.message : "Okänt fel.");
-    } finally {
       setCalendarLoading(false);
     }
   }
@@ -421,6 +420,7 @@ export default function WeeksPage() {
     if (!selectedWeek || names.length === 0) {
       await Promise.all([fetchWeeks(), fetchPlayers()]);
       setUnknownPlayerPrompt(null);
+      setCalendarLoading(false);
       return;
     }
 
