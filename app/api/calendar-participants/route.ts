@@ -62,7 +62,10 @@ function extractAttendeesFromHtml(html: string): string[] {
       continue;
     }
     const namePartPattern = /^[\p{L}][\p{L}'\-]*$/u;
-    if (parts.every((part) => namePartPattern.test(part))) {
+    // Reject strings containing known Swedish UI labels / functional words that are not names
+    const NON_NAME_WORDS = new Set(["ej", "kommer", "ledare", "admin", "ja", "nej", "inte", "och", "eller", "av", "är", "svar"]);
+    const hasNonNameWord = parts.some((part) => NON_NAME_WORDS.has(part.toLowerCase()));
+    if (!hasNonNameWord && parts.every((part) => namePartPattern.test(part))) {
       names.push(name);
     }
   }
