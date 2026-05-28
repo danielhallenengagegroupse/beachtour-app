@@ -46,8 +46,15 @@ function extractAttendeesFromHtml(html: string): string[] {
 
   let match: RegExpExecArray | null;
   while ((match = tdPattern.exec(searchHtml)) !== null) {
-    // Strip all tags, decode entities, normalise whitespace
-    const raw = match[1]
+    // Treat <br> and closing block tags as line separators so that user comments
+    // rendered below the name (e.g. "Blir sen") end up on a separate line and
+    // get discarded when we take only the first line.
+    const firstLine = match[1]
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(div|p|li|section|article)[^>]*>/gi, "\n")
+      .split("\n")[0];
+    // Strip all remaining tags, decode entities, normalise whitespace
+    const raw = firstLine
       .replace(/<[^>]+>/g, " ")
       .replace(/\|\s*Ledare/gi, "")
       .replace(/\|\s*Admin/gi, "");
