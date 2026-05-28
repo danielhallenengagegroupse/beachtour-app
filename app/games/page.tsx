@@ -92,6 +92,7 @@ export default function GamesPage() {
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [matchForm, setMatchForm] = useState<MatchFormState>(createEmptyMatchForm(1, 1));
   const [savingMatch, setSavingMatch] = useState(false);
+  const [hideCompletedGames, setHideCompletedGames] = useState(false);
 
   useEffect(() => {
     void fetchWeeks();
@@ -208,6 +209,14 @@ export default function GamesPage() {
       const data = await response.json();
       const nextGames = Array.isArray(data) ? data : [];
       setGames(nextGames);
+      const completedCount = nextGames.filter(
+        (g) => g.team1Score !== null && g.team2Score !== null
+      ).length;
+      if (nextGames.length > 0 && completedCount > 0 && completedCount < nextGames.length) {
+        setHideCompletedGames(true);
+      } else {
+        setHideCompletedGames(false);
+      }
       setScoreDrafts(
         Object.fromEntries(
           nextGames.map((game) => [
@@ -514,7 +523,7 @@ export default function GamesPage() {
       <div className="mx-auto max-w-7xl px-4 py-12">
         {error && <div className="mb-6 rounded bg-red-100 p-3 text-red-700">{error}</div>}
 
-        <div className="mb-8 flex gap-2 flex-wrap">
+        <div className="mb-4 flex gap-2 flex-wrap">
           {weeks.map((week) => (
             <button
               key={week.id}
@@ -527,6 +536,22 @@ export default function GamesPage() {
             </button>
           ))}
         </div>
+
+        {selectedWeek && games.length > 0 && (
+          <div className="mb-8 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHideCompletedGames((prev) => !prev)}
+              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
+                hideCompletedGames
+                  ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                  : "bg-white text-gray-700 hover:bg-indigo-50"
+              }`}
+            >
+              Dölj matcher med resultat: {hideCompletedGames ? "Ja" : "Nej"}
+            </button>
+          </div>
+        )}
 
         {selectedWeek && games.length === 0 && (
           <div className="rounded-lg bg-white p-8 text-center text-gray-500 shadow-md">
@@ -661,7 +686,14 @@ export default function GamesPage() {
             </div>
           )}
 
-          {rounds.map((round) => (
+          {rounds.map((round) => {
+            const visibleGames = hideCompletedGames
+              ? round.games.filter((g) => g.team1Score === null || g.team2Score === null)
+              : round.games;
+
+            if (visibleGames.length === 0) return null;
+
+            return (
             <div key={round.roundNumber} className="rounded-lg bg-white p-6 shadow-md">
               <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <h3 className="text-xl font-bold text-gray-800">Runda {round.roundNumber}</h3>
@@ -673,7 +705,7 @@ export default function GamesPage() {
               </div>
 
               <div className="space-y-4">
-                {round.games.map((game) => {
+                {visibleGames.map((game) => {
                   const team1 = game.teams.filter((team) => team.team === 1);
                   const team2 = game.teams.filter((team) => team.team === 2);
                   const isDraw = game.team1Score !== null && game.team2Score !== null && game.team1Score === game.team2Score;
@@ -743,7 +775,8 @@ export default function GamesPage() {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </main>
