@@ -127,7 +127,17 @@ function beamPartition(
         const group: [number, number, number, number] = [anchor, trio[0], trio[1], trio[2]];
         const pairing = chooseBestPairing(group, teammateCounts, opponentCounts);
         const gameScore = scoreGame(pairing, teammateCounts, opponentCounts);
-        const newRemaining = rest.filter((p) => !trio.includes(p));
+
+        // Merge-filter: both rest and trio are sorted, so this is O(n) not O(n×3)
+        let ti = 0;
+        const newRemaining: number[] = [];
+        for (const p of rest) {
+          if (ti < trio.length && trio[ti] === p) {
+            ti++;
+          } else {
+            newRemaining.push(p);
+          }
+        }
 
         nextBeam.push({
           remaining: newRemaining,
@@ -137,11 +147,23 @@ function beamPartition(
       }
     }
 
-    nextBeam.sort((a, b) => a.score - b.score || (Math.random() < 0.5 ? -1 : 1));
-    beam = nextBeam.slice(0, beamWidth);
+    // Only sort and prune when the beam exceeds the width limit.
+    // For small player counts the beam never reaches the limit, so we skip
+    // the sort entirely and find the best with a cheap linear scan at the end.
+    if (nextBeam.length > beamWidth) {
+      nextBeam.sort((a, b) => a.score - b.score || (Math.random() < 0.5 ? -1 : 1));
+      beam = nextBeam.slice(0, beamWidth);
+    } else {
+      beam = nextBeam;
+    }
   }
 
-  return beam[0].games;
+  // Linear scan for the best item (avoids a redundant final sort)
+  let bestItem = beam[0];
+  for (let i = 1; i < beam.length; i++) {
+    if (beam[i].score < bestItem.score) bestItem = beam[i];
+  }
+  return bestItem.games;
 }
 
 function scoreRestGroup(
@@ -302,15 +324,25 @@ export function generateSchedule(playerIds: number[], rounds: number): Generated
 
   // Run multiple independent attempts (each differs due to random tiebreaking)
   // and return the one with the most balanced opponent distribution.
-  const ATTEMPTS = 30;
+  // Stop early when quality stops improving for several consecutive attempts.
+  const MAX_ATTEMPTS = 20;
+  const MIN_ATTEMPTS = 5;
+  const NO_IMPROVE_LIMIT = 5;
   let best = generateScheduleAttempt(playerIds, rounds);
   let bestScore = scoreScheduleQuality(best);
-  for (let i = 1; i < ATTEMPTS; i++) {
+  let noImprovementRun = 0;
+  for (let i = 1; i < MAX_ATTEMPTS; i++) {
+    if (i >= MIN_ATTEMPTS && noImprovementRun >= NO_IMPROVE_LIMIT) {
+      break;
+    }
     const candidate = generateScheduleAttempt(playerIds, rounds);
     const score = scoreScheduleQuality(candidate);
     if (score < bestScore) {
       best = candidate;
       bestScore = score;
+      noImprovementRun = 0;
+    } else {
+      noImprovementRun++;
     }
   }
   return best;
