@@ -54,8 +54,18 @@ async function main() {
   XLSX.utils.book_append_sheet(wb, ws1, "Ställning");
 
   // --- Sheet 2: Matcher ---
+  // Compute court (Bana) number = position within each round
+  const roundCourtCounters = new Map();
+  const gameBana = new Map();
+  for (const g of games) {
+    const prev = roundCourtCounters.get(g.roundNumber) ?? 0;
+    const bana = prev + 1;
+    roundCourtCounters.set(g.roundNumber, bana);
+    gameBana.set(g.id, bana);
+  }
+
   const gameRows = [
-    ["Runda", "Match", "Lag 1 Spelare A", "Lag 1 Spelare B", "Set Lag 1", "Set Lag 2", "Lag 2 Spelare A", "Lag 2 Spelare B", "Vinnare"],
+    ["Runda", "Bana", "Lag 1 Spelare A", "Lag 1 Spelare B", "Set Lag 1", "Set Lag 2", "Lag 2 Spelare A", "Lag 2 Spelare B", "Vinnare"],
   ];
   games.forEach((g) => {
     const team1 = g.teams.filter((t) => t.team === 1);
@@ -68,7 +78,7 @@ async function main() {
     }
     gameRows.push([
       g.roundNumber,
-      g.gameNumber,
+      gameBana.get(g.id),
       t1names[0] ?? "",
       t1names[1] ?? "",
       g.team1Score ?? "",
