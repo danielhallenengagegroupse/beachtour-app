@@ -7,7 +7,8 @@ interface Player {
   id: number;
   name: string;
   weeksPlayed: number;
-  createdAt: string;
+  gamesPlayed: number;
+  winPercentage: number | null;
 }
 
 export default function PlayersPage() {
@@ -152,8 +153,9 @@ export default function PlayersPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Namn</th>
-                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">Antal spelade veckor</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Registrerad</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">Spelade veckor</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">Spelade matcher</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">Vinst %</th>
                     <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">Åtgärd</th>
                   </tr>
                 </thead>
@@ -162,8 +164,9 @@ export default function PlayersPage() {
                     <tr key={player.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">{player.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-600 text-center">{player.weeksPlayed}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(player.createdAt).toLocaleDateString("sv-SE")}
+                      <td className="px-6 py-4 text-sm text-gray-600 text-center">{player.gamesPlayed}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600 text-center">
+                        {player.winPercentage !== null ? `${(player.winPercentage * 100).toFixed(1)} %` : "–"}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button

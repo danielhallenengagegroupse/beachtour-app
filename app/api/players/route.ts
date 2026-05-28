@@ -30,15 +30,29 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const players = await prisma.player.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        _count: { select: { weekParticipations: true } },
-      },
-    });
+    const [players, standingTotals] = await Promise.all([
+      prisma.player.findMany({
+        orderBy: { name: "asc" },
+        include: {
+          _count: { select: { weekParticipations: true } },
+        },
+      }),
+      prisma.playerStanding.groupBy({
+        by: ["playerId"],
+        _sum: { gamesPlayed: true, wins: true },
+      }),
+    ]);
+
+    const totalsMap = new Map(
+      standingTotals.map((s) => [s.playerId, { gamesPlayed: s._sum.gamesPlayed ?? 0, wins: s._sum.wins ?? 0 }])
+    );
 
     return NextResponse.json(
-      players.map((p) => ({ ...p, weeksPlayed: p._count.weekParticipations }))
+      players.map((p) => {
+        const totals = totalsMap.get(p.id) ?? { gamesPlayed: 0, wins: 0 };
+        const winPercentage = totals.gamesPlayed > 0 ? totals.wins / totals.gamesPlayed : null;
+        return { ...p, weeksPlayed: p._count.weekParticipations, gamesPlayed: totals.gamesPlayed, winPercentage };
+      })
     );
   } catch (error) {
     console.error("Error fetching players:", error);
