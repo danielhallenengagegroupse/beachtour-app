@@ -52,7 +52,9 @@ function extractAttendeesFromHtml(html: string): string[] {
     const firstLine = match[1]
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(div|p|li|section|article)[^>]*>/gi, "\n")
-      .split("\n")[0];
+      .split("\n")
+      .map((segment) => segment.trim())
+      .find((segment) => segment.length > 0) ?? "";
     // Strip all remaining tags, decode entities, normalise whitespace
     const raw = firstLine
       .replace(/<[^>]+>/g, " ")
