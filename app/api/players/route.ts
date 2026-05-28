@@ -47,13 +47,20 @@ export async function GET() {
       standingTotals.map((s) => [s.playerId, { gamesPlayed: s._sum.gamesPlayed ?? 0, wins: s._sum.wins ?? 0 }])
     );
 
-    return NextResponse.json(
-      players.map((p) => {
-        const totals = totalsMap.get(p.id) ?? { gamesPlayed: 0, wins: 0 };
-        const winPercentage = totals.gamesPlayed > 0 ? totals.wins / totals.gamesPlayed : null;
-        return { ...p, weeksPlayed: p._count.weekParticipations, gamesPlayed: totals.gamesPlayed, winPercentage };
-      })
-    );
+    const mapped = players.map((p) => {
+      const totals = totalsMap.get(p.id) ?? { gamesPlayed: 0, wins: 0 };
+      const winPercentage = totals.gamesPlayed > 0 ? totals.wins / totals.gamesPlayed : null;
+      return { ...p, weeksPlayed: p._count.weekParticipations, gamesPlayed: totals.gamesPlayed, winPercentage };
+    });
+
+    mapped.sort((a, b) => {
+      if (b.winPercentage === a.winPercentage) return a.name.localeCompare(b.name, "sv");
+      if (b.winPercentage === null) return -1;
+      if (a.winPercentage === null) return 1;
+      return b.winPercentage - a.winPercentage;
+    });
+
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error("Error fetching players:", error);
     return NextResponse.json(
