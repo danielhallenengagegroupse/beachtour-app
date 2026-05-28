@@ -56,7 +56,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const schedule = generateSchedule(playerIds, roundsNumber);
+    // Fetch historical win rates so the scheduler can balance teams by skill level.
+    const standingTotals = await prisma.playerStanding.groupBy({
+      by: ["playerId"],
+      where: { playerId: { in: playerIds } },
+      _sum: { gamesPlayed: true, wins: true },
+    });
+    const winRates = new Map<number, number>(
+      standingTotals
+        .filter((s) => (s._sum.gamesPlayed ?? 0) > 0)
+        .map((s) => [s.playerId, (s._sum.wins ?? 0) / (s._sum.gamesPlayed ?? 1)])
+    );
+
+    const schedule = generateSchedule(playerIds, roundsNumber, winRates);
     const dayId = week.days[0].id;
 
     await prisma.$transaction(async (tx) => {
