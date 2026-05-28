@@ -46,15 +46,24 @@ function extractAttendeesFromHtml(html: string): string[] {
 
   let match: RegExpExecArray | null;
   while ((match = tdPattern.exec(searchHtml)) !== null) {
-    // Treat <br> and closing block tags as line separators so that user comments
-    // rendered below the name (e.g. "Blir sen") end up on a separate line and
-    // get discarded when we take only the first line.
-    const firstLine = match[1]
+    // Treat <br> and closing block tags as line separators so user comments
+    // rendered below the name (e.g. "Blir sen") end up on a separate line.
+    const segments = match[1]
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(div|p|li|section|article)[^>]*>/gi, "\n")
-      .split("\n")
-      .map((segment) => segment.trim())
-      .find((segment) => segment.length > 0) ?? "";
+      .split("\n");
+
+    // Find the first segment that has actual text content after stripping tags.
+    // Skip segments that are pure opening tags (strip to nothing).
+    let firstLine = "";
+    for (const segment of segments) {
+      const text = normalizeWhitespace(decodeHtmlEntities(segment.replace(/<[^>]+>/g, " ")));
+      if (text.length > 0) {
+        firstLine = segment;
+        break;
+      }
+    }
+
     // Strip all remaining tags, decode entities, normalise whitespace
     const raw = firstLine
       .replace(/<[^>]+>/g, " ")
@@ -224,6 +233,12 @@ export async function POST(request: NextRequest) {
 
     const html = await fetchWithSession(resolvedUrl);
     const names = extractAttendeesFromHtml(html);
+
+    console.log(`[calendar-participants] url=${resolvedUrl} htmlLen=${html.length} names=${JSON.stringify(names)}`);
+    const tabYesPresent = /id=["']tabYes["']/i.test(html);
+    if (!tabYesPresent) {
+      console.warn("[calendar-participants] #tabYes not found in HTML");
+    }
 
     return NextResponse.json({ names });
   } catch (error) {
