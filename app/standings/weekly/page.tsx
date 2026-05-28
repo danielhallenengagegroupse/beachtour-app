@@ -151,11 +151,15 @@ export default function StandingsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {standings.map((standing, index) => {
-                      const rank = index === 0 || standing.totalPoints !== standings[index - 1].totalPoints
-                        ? index + 1
-                        : standings
-                            .slice(0, index)
-                            .findIndex((s) => s.totalPoints === standing.totalPoints) + 1;
+                      const isSameRank = (a: PlayerStanding, b: PlayerStanding) =>
+                        a.winPercentage === b.winPercentage &&
+                        a.wins === b.wins &&
+                        a.losses === b.losses &&
+                        a.gamesPlayed === b.gamesPlayed;
+                      const rank =
+                        index === 0 || !isSameRank(standing, standings[index - 1])
+                          ? index + 1
+                          : standings.slice(0, index).findIndex((s) => isSameRank(s, standing)) + 1;
                       return (
                       <tr key={standing.id} className="hover:bg-gray-50">
                         <td className="px-3 py-3 text-sm font-bold text-gray-900">
