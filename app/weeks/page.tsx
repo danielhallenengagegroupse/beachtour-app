@@ -52,6 +52,7 @@ export default function WeeksPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [roundsForGeneration, setRoundsForGeneration] = useState("");
   const [loading, setLoading] = useState(false);
+  const [generateProgress, setGenerateProgress] = useState<{ completed: number; total: number } | null>(null);
   const [error, setError] = useState("");
 
   // Calendar import state
@@ -336,47 +337,84 @@ export default function WeeksPage() {
 
     setLoading(true);
     setError("");
+    setGenerateProgress(null);
 
-    try {
-      let response = await fetch("/api/games/generate", {
+    const doGenerate = async (forceRegenerate: boolean): Promise<boolean> => {
+      const response = await fetch("/api/games/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weekId: selectedWeek.id, rounds, forceRegenerate: false }),
+        body: JSON.stringify({ weekId: selectedWeek.id, rounds, forceRegenerate }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
+      // Pre-stream error responses (non-SSE, e.g. 400/409 from validation).
+      if (!response.ok || response.headers.get("Content-Type")?.includes("application/json")) {
+        const data = await response.json().catch(() => ({}));
 
-        if (response.status === 409 && data.hasReportedResults) {
+        if (response.status === 409 && (data as { hasReportedResults?: boolean }).hasReportedResults) {
           const shouldReplace = window.confirm(
             "Det finns redan registrerade resultat. Vill du radera dessa matcher och skapa ett nytt schema?"
           );
 
           if (!shouldReplace) {
-            return;
+            return false;
           }
 
-          response = await fetch("/api/games/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weekId: selectedWeek.id, rounds, forceRegenerate: true }),
-          });
+          return doGenerate(true);
+        }
 
-          if (!response.ok) {
-            const retryData = await response.json().catch(() => ({}));
-            throw new Error(retryData.error ?? "Failed to generate games");
+        throw new Error((data as { error?: string }).error ?? "Failed to generate games");
+      }
+
+      // Read SSE stream and emit progress events.
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response stream");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+
+          const event = JSON.parse(line.slice(6)) as {
+            type: string;
+            completed?: number;
+            total?: number;
+            error?: string;
+          };
+
+          if (event.type === "progress" && event.completed !== undefined && event.total !== undefined) {
+            setGenerateProgress({ completed: event.completed, total: event.total });
+          } else if (event.type === "error") {
+            throw new Error(event.error ?? "Failed to generate games");
           }
-        } else {
-          throw new Error(data.error ?? "Failed to generate games");
+          // "done" event — stream ends naturally.
         }
       }
 
-      await Promise.all([fetchGameCount(selectedWeek.id), fetchWeeks()]);
+      return true;
+    };
+
+    try {
+      const completed = await doGenerate(false);
+      if (completed) {
+        await Promise.all([fetchGameCount(selectedWeek.id), fetchWeeks()]);
+      }
     } catch (generationError) {
       console.error(generationError);
       setError(generationError instanceof Error ? generationError.message : "Misslyckades att generera matcher.");
     } finally {
       setLoading(false);
+      setGenerateProgress(null);
     }
   }
 
@@ -747,7 +785,11 @@ export default function WeeksPage() {
                         disabled={loading || selectedWeek.weekComplete || selectedWeek.participants.length < 4 || !roundsForGeneration}
                         className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        {loading ? "Arbetar..." : "Generera Matcher"}
+                        {generateProgress
+                          ? `Runda ${generateProgress.completed} av ${generateProgress.total} klar...`
+                          : loading
+                          ? "Arbetar..."
+                          : "Generera Matcher"}
                       </button>
                     </div>
                   </div>

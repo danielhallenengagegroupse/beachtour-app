@@ -4,127 +4,161 @@ import { generateSchedule } from "@/lib/schedule";
 import { rebuildSeasonStandings } from "@/lib/standings";
 
 export async function POST(request: NextRequest) {
-  try {
-    const { weekId, rounds, forceRegenerate } = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-    if (!weekId) {
-      return NextResponse.json({ error: "weekId is required" }, { status: 400 });
-    }
+  const { weekId, rounds, forceRegenerate } = body as {
+    weekId?: number;
+    rounds?: number;
+    forceRegenerate?: boolean;
+  };
 
-    const roundsNumber = Number(rounds);
+  if (!weekId) {
+    return NextResponse.json({ error: "weekId is required" }, { status: 400 });
+  }
 
-    if (!rounds || Number.isNaN(roundsNumber) || roundsNumber < 1) {
-      return NextResponse.json({ error: "rounds is required and must be at least 1" }, { status: 400 });
-    }
+  const roundsNumber = Number(rounds);
 
-    const week = await prisma.week.findUnique({
-      where: { id: weekId },
-      include: {
-        days: { orderBy: { dayNumber: "asc" } },
-        participants: { orderBy: { playerId: "asc" } },
+  if (!rounds || Number.isNaN(roundsNumber) || roundsNumber < 1) {
+    return NextResponse.json({ error: "rounds is required and must be at least 1" }, { status: 400 });
+  }
+
+  const week = await prisma.week.findUnique({
+    where: { id: weekId },
+    include: {
+      days: { orderBy: { dayNumber: "asc" } },
+      participants: { orderBy: { playerId: "asc" } },
+    },
+  });
+
+  if (!week || week.days.length === 0) {
+    return NextResponse.json({ error: "Week not found" }, { status: 404 });
+  }
+
+  if (week.weekComplete) {
+    return NextResponse.json({ error: "Week is complete and matches/results are locked" }, { status: 409 });
+  }
+
+  const playerIds = [...new Set(week.participants.map((participant) => participant.playerId))];
+
+  if (playerIds.length < 4) {
+    return NextResponse.json({ error: "At least 4 players must be added before games can be generated" }, { status: 400 });
+  }
+
+  const existingGames = await prisma.game.findMany({
+    where: { dayId: week.days[0].id },
+    select: { id: true, team1Score: true, team2Score: true },
+  });
+
+  const hasReportedResults = existingGames.some((game) => game.team1Score !== null || game.team2Score !== null);
+
+  if (hasReportedResults && !forceRegenerate) {
+    return NextResponse.json(
+      {
+        error: "Det finns redan registrerade resultat.",
+        hasReportedResults: true,
       },
-    });
-
-    if (!week || week.days.length === 0) {
-      return NextResponse.json({ error: "Week not found" }, { status: 404 });
-    }
-
-    if (week.weekComplete) {
-      return NextResponse.json({ error: "Week is complete and matches/results are locked" }, { status: 409 });
-    }
-
-    const playerIds = [...new Set(week.participants.map((participant) => participant.playerId))];
-
-    if (playerIds.length < 4) {
-      return NextResponse.json({ error: "At least 4 players must be added before games can be generated" }, { status: 400 });
-    }
-
-    const existingGames = await prisma.game.findMany({
-      where: { dayId: week.days[0].id },
-      select: { id: true, team1Score: true, team2Score: true },
-    });
-
-    const hasReportedResults = existingGames.some((game) => game.team1Score !== null || game.team2Score !== null);
-
-    if (hasReportedResults && !forceRegenerate) {
-      return NextResponse.json(
-        {
-          error: "Det finns redan registrerade resultat.",
-          hasReportedResults: true,
-        },
-        { status: 409 }
-      );
-    }
-
-    // Fetch historical win rates so the scheduler can balance teams by skill level.
-    const standingTotals = await prisma.playerStanding.groupBy({
-      by: ["playerId"],
-      where: { playerId: { in: playerIds } },
-      _sum: { gamesPlayed: true, wins: true },
-    });
-    const winRates = new Map<number, number>(
-      standingTotals
-        .filter((s) => (s._sum.gamesPlayed ?? 0) > 0)
-        .map((s) => [s.playerId, (s._sum.wins ?? 0) / (s._sum.gamesPlayed ?? 1)])
+      { status: 409 }
     );
+  }
 
-    const schedule = generateSchedule(playerIds, roundsNumber, winRates);
-    const dayId = week.days[0].id;
+  // Fetch historical win rates so the scheduler can balance teams by skill level.
+  const standingTotals = await prisma.playerStanding.groupBy({
+    by: ["playerId"],
+    where: { playerId: { in: playerIds } },
+    _sum: { gamesPlayed: true, wins: true },
+  });
+  const winRates = new Map<number, number>(
+    standingTotals
+      .filter((s) => (s._sum.gamesPlayed ?? 0) > 0)
+      .map((s) => [s.playerId, (s._sum.wins ?? 0) / (s._sum.gamesPlayed ?? 1)])
+  );
 
-    await prisma.$transaction(async (tx) => {
-      await tx.week.update({
-        where: { id: week.id },
-        data: { rounds: roundsNumber },
-      });
+  const schedule = generateSchedule(playerIds, roundsNumber, winRates);
+  const dayId = week.days[0].id;
+  const totalRounds = schedule.length;
 
-      if (existingGames.length > 0) {
-        await tx.game.deleteMany({ where: { dayId } });
-      }
+  const encoder = new TextEncoder();
 
-      let gameNumber = 1;
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      };
 
-      for (const round of schedule) {
-        for (const game of round.games) {
-          await tx.game.create({
-            data: {
-              dayId,
-              roundNumber: round.roundNumber,
-              gameNumber,
-              team1Score: null,
-              team2Score: null,
-              winnerId: null,
-              teams: {
-                create: [
-                  { playerId: game.team1[0], team: 1 },
-                  { playerId: game.team1[1], team: 1 },
-                  { playerId: game.team2[0], team: 2 },
-                  { playerId: game.team2[1], team: 2 },
-                ],
-              },
-            },
+      try {
+        // Clear existing games and update round count in one transaction.
+        await prisma.$transaction(async (tx) => {
+          await tx.week.update({ where: { id: week.id }, data: { rounds: roundsNumber } });
+          if (existingGames.length > 0) {
+            await tx.game.deleteMany({ where: { dayId } });
+          }
+          await tx.dailyRanking.deleteMany({ where: { dayId } });
+          await tx.playerStanding.deleteMany({ where: { weekId } });
+        });
+
+        let gameNumber = 1;
+
+        for (let i = 0; i < schedule.length; i++) {
+          const round = schedule[i];
+
+          await prisma.$transaction(async (tx) => {
+            for (const game of round.games) {
+              await tx.game.create({
+                data: {
+                  dayId,
+                  roundNumber: round.roundNumber,
+                  gameNumber,
+                  team1Score: null,
+                  team2Score: null,
+                  winnerId: null,
+                  teams: {
+                    create: [
+                      { playerId: game.team1[0], team: 1 },
+                      { playerId: game.team1[1], team: 1 },
+                      { playerId: game.team2[0], team: 2 },
+                      { playerId: game.team2[1], team: 2 },
+                    ],
+                  },
+                },
+              });
+
+              gameNumber += 1;
+            }
           });
 
-          gameNumber += 1;
+          send({ type: "progress", completed: i + 1, total: totalRounds });
         }
+
+        await prisma.$transaction(async (tx) => {
+          await rebuildSeasonStandings(tx);
+        });
+
+        const games = await prisma.game.findMany({
+          where: { dayId },
+          include: { teams: { include: { player: true } } },
+          orderBy: [{ roundNumber: "asc" }, { gameNumber: "asc" }],
+        });
+
+        send({ type: "done", schedule, games });
+      } catch (error) {
+        console.error("Error generating games:", error);
+        const detail = error instanceof Error ? error.message : "Unknown error";
+        send({ type: "error", error: `Failed to generate games: ${detail}` });
+      } finally {
+        controller.close();
       }
+    },
+  });
 
-      await tx.dailyRanking.deleteMany({ where: { dayId } });
-      await tx.playerStanding.deleteMany({ where: { weekId } });
-      await rebuildSeasonStandings(tx);
-    }, { timeout: 30000, maxWait: 10000 });
-
-    const games = await prisma.game.findMany({
-      where: { dayId },
-      include: {
-        teams: { include: { player: true } },
-      },
-      orderBy: [{ roundNumber: "asc" }, { gameNumber: "asc" }],
-    });
-
-    return NextResponse.json({ schedule, games }, { status: 201 });
-  } catch (error) {
-    console.error("Error generating games:", error);
-    const detail = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: `Failed to generate games: ${detail}` }, { status: 500 });
-  }
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }
