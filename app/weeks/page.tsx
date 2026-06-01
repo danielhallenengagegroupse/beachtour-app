@@ -337,7 +337,7 @@ export default function WeeksPage() {
 
     setLoading(true);
     setError("");
-    setGenerateProgress(null);
+    setGenerateProgress({ completed: 0, total: rounds });
 
     const doGenerate = async (forceRegenerate: boolean): Promise<boolean> => {
       const response = await fetch("/api/games/generate", {
@@ -786,7 +786,7 @@ export default function WeeksPage() {
                         className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {generateProgress
-                          ? `Runda ${generateProgress.completed} av ${generateProgress.total} klar...`
+                          ? `Runda ${generateProgress.completed + 1} av ${generateProgress.total}...`
                           : loading
                           ? "Arbetar..."
                           : "Generera Matcher"}
