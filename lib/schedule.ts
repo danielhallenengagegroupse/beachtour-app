@@ -45,8 +45,7 @@ function getPairings(group: [number, number, number, number]) {
 function scoreGame(
   game: GeneratedGame,
   teammateCounts: Counts,
-  opponentCounts: Counts,
-  winRates: Map<number, number>
+  opponentCounts: Counts
 ) {
   const teammatePenalty =
     getCount(teammateCounts, game.team1[0], game.team1[1]) +
@@ -62,31 +61,22 @@ function scoreGame(
   const op = (c: number) => c >= 3 ? 10_000 : c * c;
   const opponentPenalty = op(c1) + op(c2) + op(c3) + op(c4);
 
-  // Balance penalty: penalise matchups where both strong players are on the same team.
-  // Weight 30 means a perfect mismatch (100 % vs 0 %) costs less than one repeated
-  // teammate (100), so it guides pairing without overriding the fairness rules.
-  const wp = (id: number) => winRates.get(id) ?? 0.5;
-  const team1Avg = (wp(game.team1[0]) + wp(game.team1[1])) / 2;
-  const team2Avg = (wp(game.team2[0]) + wp(game.team2[1])) / 2;
-  const balancePenalty = Math.abs(team1Avg - team2Avg) * 30;
-
-  return teammatePenalty * 100 + opponentPenalty + balancePenalty;
+  return teammatePenalty * 100 + opponentPenalty;
 }
 
 function chooseBestPairing(
   group: [number, number, number, number],
   teammateCounts: Counts,
-  opponentCounts: Counts,
-  winRates: Map<number, number>
+  opponentCounts: Counts
 ) {
   const pairings = getPairings(group);
 
   let bestPairing = pairings[0];
-  let bestScore = scoreGame(bestPairing, teammateCounts, opponentCounts, winRates);
+  let bestScore = scoreGame(bestPairing, teammateCounts, opponentCounts);
 
   for (let index = 1; index < pairings.length; index++) {
     const candidate = pairings[index];
-    const candidateScore = scoreGame(candidate, teammateCounts, opponentCounts, winRates);
+    const candidateScore = scoreGame(candidate, teammateCounts, opponentCounts);
 
     if (candidateScore < bestScore || (candidateScore === bestScore && Math.random() < 0.5)) {
       bestPairing = candidate;
@@ -123,8 +113,7 @@ function combinations(values: number[], size: number): number[][] {
 function beamPartition(
   available: number[],
   teammateCounts: Counts,
-  opponentCounts: Counts,
-  winRates: Map<number, number>
+  opponentCounts: Counts
 ): GeneratedGame[] {
   if (available.length < 4) return [];
 
@@ -144,8 +133,8 @@ function beamPartition(
 
       for (const trio of combinations(rest, 3)) {
         const group: [number, number, number, number] = [anchor, trio[0], trio[1], trio[2]];
-        const pairing = chooseBestPairing(group, teammateCounts, opponentCounts, winRates);
-        const gameScore = scoreGame(pairing, teammateCounts, opponentCounts, winRates);
+        const pairing = chooseBestPairing(group, teammateCounts, opponentCounts);
+        const gameScore = scoreGame(pairing, teammateCounts, opponentCounts);
 
         // Merge-filter: both rest and trio are sorted, so this is O(n) not O(n×3)
         let ti = 0;
@@ -332,7 +321,7 @@ function applyGameHistory(game: GeneratedGame, teammateCounts: Counts, opponentC
   incrementCount(opponentCounts, game.team1[1], game.team2[1]);
 }
 
-export function generateSchedule(playerIds: number[], rounds: number, winRates: Map<number, number> = new Map()): GeneratedRound[] {
+export function generateSchedule(playerIds: number[], rounds: number): GeneratedRound[] {
   if (playerIds.length < 4) {
     throw new Error("At least 4 players are required to generate games.");
   }
@@ -347,14 +336,14 @@ export function generateSchedule(playerIds: number[], rounds: number, winRates: 
   const MAX_ATTEMPTS = 20;
   const MIN_ATTEMPTS = 5;
   const NO_IMPROVE_LIMIT = 5;
-  let best = generateScheduleAttempt(playerIds, rounds, winRates);
+  let best = generateScheduleAttempt(playerIds, rounds);
   let bestScore = scoreScheduleQuality(best);
   let noImprovementRun = 0;
   for (let i = 1; i < MAX_ATTEMPTS; i++) {
     if (i >= MIN_ATTEMPTS && noImprovementRun >= NO_IMPROVE_LIMIT) {
       break;
     }
-    const candidate = generateScheduleAttempt(playerIds, rounds, winRates);
+    const candidate = generateScheduleAttempt(playerIds, rounds);
     const score = scoreScheduleQuality(candidate);
     if (score < bestScore) {
       best = candidate;
@@ -391,7 +380,7 @@ function scoreScheduleQuality(schedule: GeneratedRound[]): number {
   return teammateScore * 10 + opponentScore;
 }
 
-function generateScheduleAttempt(playerIds: number[], rounds: number, winRates: Map<number, number>): GeneratedRound[] {
+function generateScheduleAttempt(playerIds: number[], rounds: number): GeneratedRound[] {
   const teammateCounts = new Map<string, number>();
   const opponentCounts = new Map<string, number>();
   const restCounts = new Map<number, number>();
@@ -421,7 +410,7 @@ function generateScheduleAttempt(playerIds: number[], rounds: number, winRates: 
       incrementCount(restPairCounts, left, right);
     }
 
-    const roundGames = beamPartition(available, teammateCounts, opponentCounts, winRates);
+    const roundGames = beamPartition(available, teammateCounts, opponentCounts);
     for (const game of roundGames) {
       games.push(game);
       applyGameHistory(game, teammateCounts, opponentCounts);
