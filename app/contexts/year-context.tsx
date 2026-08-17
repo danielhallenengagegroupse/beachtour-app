@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-const YEAR_KEY = "beachtour_year";
 const DEFAULT_YEAR = 2026;
 const MIN_YEAR = 2026;
 const MAX_YEAR = 2040;
@@ -31,15 +30,7 @@ export function YearProvider({ children }: { children: ReactNode }) {
   const [year, setYearState] = useState<number>(DEFAULT_YEAR);
 
   useEffect(() => {
-    const stored = localStorage.getItem(YEAR_KEY);
-    if (stored) {
-      const parsed = parseInt(stored, 10);
-      if (!isNaN(parsed) && parsed >= MIN_YEAR && parsed <= MAX_YEAR) {
-        setYearState(parsed);
-        return;
-      }
-    }
-    // No explicit user selection — auto-detect the latest year with active weeks
+    // Always auto-detect the latest year with active weeks on load
     fetch("/api/weeks?latestYear=1")
       .then((res) => res.json())
       .then((data: unknown) => {
@@ -49,13 +40,13 @@ export function YearProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        // Keep default
+        // Keep default on error
       });
   }, []);
 
   function setYear(newYear: number) {
     setYearState(newYear);
-    localStorage.setItem(YEAR_KEY, newYear.toString());
+    // Not persisted — selection resets to latest active year on next load
   }
 
   return (
