@@ -75,6 +75,15 @@ export async function GET(request: NextRequest) {
     const yearParam = request.nextUrl.searchParams.get("year");
     const year = yearParam ? parseInt(yearParam, 10) : 2026;
 
+    // Return just the latest year that has any weeks (for auto-detection)
+    if (request.nextUrl.searchParams.get("latestYear") === "1") {
+      const latest = await prisma.week.findFirst({
+        orderBy: { year: "desc" },
+        select: { year: true },
+      });
+      return NextResponse.json({ year: latest?.year ?? 2026 });
+    }
+
     const weeks = await prisma.week.findMany({
       where: { year },
       orderBy: { weekNumber: "asc" },
