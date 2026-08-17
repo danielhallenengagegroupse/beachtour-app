@@ -81,10 +81,15 @@ export async function GET(request: NextRequest) {
       });
 
       const weekIds = weeks.map((week) => week.id);
-      const players = await prisma.player.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      });
+
+      // Only include players who participated in at least one week this year
+      const players = weekIds.length
+        ? await prisma.player.findMany({
+            where: { weekParticipations: { some: { weekId: { in: weekIds } } } },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" },
+          })
+        : [];
 
       const weeklyRows = weekIds.length
         ? await prisma.playerStanding.findMany({

@@ -28,19 +28,49 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const yearParam = request.nextUrl.searchParams.get("year");
+    const year = yearParam ? parseInt(yearParam, 10) : null;
+
+    // When a year is provided, resolve the week IDs for that year
+    let weekIdFilter: number[] | null = null;
+    if (year) {
+      const yearWeeks = await prisma.week.findMany({
+        where: { year },
+        select: { id: true },
+      });
+      weekIdFilter = yearWeeks.map((w) => w.id);
+    }
+
+    const playerWhere = weekIdFilter !== null
+      ? { weekParticipations: { some: { weekId: { in: weekIdFilter } } } }
+      : {};
+
     const [players, standingTotals] = await Promise.all([
       prisma.player.findMany({
+        where: playerWhere,
         orderBy: { name: "asc" },
         include: {
-          _count: { select: { weekParticipations: true } },
+          _count: {
+            select: {
+              weekParticipations: weekIdFilter !== null
+                ? { where: { weekId: { in: weekIdFilter } } }
+                : true,
+            },
+          },
         },
       }),
-      prisma.playerStanding.groupBy({
-        by: ["playerId"],
-        _sum: { gamesPlayed: true, wins: true },
-      }),
+      weekIdFilter !== null
+        ? prisma.playerStanding.groupBy({
+            by: ["playerId"],
+            where: weekIdFilter.length ? { weekId: { in: weekIdFilter } } : { weekId: -1 },
+            _sum: { gamesPlayed: true, wins: true },
+          })
+        : prisma.playerStanding.groupBy({
+            by: ["playerId"],
+            _sum: { gamesPlayed: true, wins: true },
+          }),
     ]);
 
     const totalsMap = new Map(

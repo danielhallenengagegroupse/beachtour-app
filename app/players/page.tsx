@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useYear } from "@/app/contexts/year-context";
 
 interface Player {
   id: number;
@@ -12,6 +13,7 @@ interface Player {
 }
 
 export default function PlayersPage() {
+  const { year, setYear, availableYears } = useYear();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingPlayerId, setDeletingPlayerId] = useState<number | null>(null);
@@ -20,7 +22,7 @@ export default function PlayersPage() {
 
   const fetchPlayers = async () => {
     try {
-      const response = await fetch("/api/players");
+      const response = await fetch(`/api/players?year=${year}`);
       const data = await response.json();
       setPlayers(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -30,8 +32,9 @@ export default function PlayersPage() {
   };
 
   useEffect(() => {
-    fetchPlayers();
-  }, []);
+    void fetchPlayers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +104,23 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold">👥 Spelare</h1>
             <p className="text-indigo-100 mt-2">Registrera och hantera spelare</p>
           </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-indigo-100">År:</span>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                className="rounded px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
             <Link href="https://beachtour.vkbjarke.se/admin" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
-            ← Till Startsidan
-          </Link>
+              ← Till Startsidan
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -140,12 +157,12 @@ export default function PlayersPage() {
         {/* Players List */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="px-8 py-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-800">Registrerade Spelare ({players.length})</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Spelare {year} ({players.length})</h2>
           </div>
 
           {players.length === 0 ? (
             <div className="px-8 py-12 text-center text-gray-500">
-              Inga spelare registrerade ännu. Lägg till din första spelare ovan!
+              Inga spelare har deltagit i {year} ännu.
             </div>
           ) : (
             <div className="overflow-x-auto">
