@@ -248,8 +248,19 @@ export async function rebuildWeekStandings(tx: PrismaTransaction, weekId: number
   }
 }
 
-export async function rebuildSeasonStandings(tx: PrismaTransaction) {
-  const allWeeklyStandings = await tx.playerStanding.findMany();
+export async function rebuildSeasonStandings(tx: PrismaTransaction, year: number) {
+  const yearWeeks = await tx.week.findMany({
+    where: { year },
+    select: { id: true },
+  });
+  const yearWeekIds = yearWeeks.map((w) => w.id);
+
+  const allWeeklyStandings = yearWeekIds.length
+    ? await tx.playerStanding.findMany({
+        where: { weekId: { in: yearWeekIds } },
+      })
+    : [];
+
   const seasonStats = new Map<number, { gamesPlayed: number; wins: number; losses: number; totalPoints: number }>();
 
   for (const standing of allWeeklyStandings) {
@@ -266,7 +277,7 @@ export async function rebuildSeasonStandings(tx: PrismaTransaction) {
     seasonStats.set(standing.playerId, entry);
   }
 
-  await tx.seasonStanding.deleteMany();
+  await tx.seasonStanding.deleteMany({ where: { year } });
 
   for (const [playerId, stats] of [...seasonStats.entries()].sort((left, right) => {
     if (right[1].totalPoints !== left[1].totalPoints) {
@@ -287,6 +298,7 @@ export async function rebuildSeasonStandings(tx: PrismaTransaction) {
   })) {
     await tx.seasonStanding.create({
       data: {
+        year,
         playerId,
         totalPoints: stats.totalPoints,
         gamesPlayed: stats.gamesPlayed,
@@ -299,7 +311,7 @@ export async function rebuildSeasonStandings(tx: PrismaTransaction) {
 
 export async function rebuildAllStandings(tx: PrismaTransaction) {
   const weeks = await tx.week.findMany({
-    select: { id: true },
+    select: { id: true, year: true },
     orderBy: { weekNumber: "asc" },
   });
 
@@ -307,5 +319,9 @@ export async function rebuildAllStandings(tx: PrismaTransaction) {
     await rebuildWeekStandings(tx, week.id);
   }
 
-  await rebuildSeasonStandings(tx);
+  // Rebuild season standings for each distinct year
+  const distinctYears = [...new Set(weeks.map((w) => w.year))];
+  for (const year of distinctYears) {
+    await rebuildSeasonStandings(tx, year);
+  }
 }

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   try {
     await ensureWeekCompleteColumn();
 
-    const { weekNumber, date } = await request.json();
+    const { weekNumber, date, year } = await request.json();
 
     if (!weekNumber || !date) {
       return NextResponse.json(
@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const weekYear: number = typeof year === "number" && year >= 2026 ? year : 2026;
     const weekDate = new Date(date);
 
     const week = await prisma.week.create({
       data: {
+        year: weekYear,
         weekNumber,
         startDate: weekDate,
         endDate: weekDate,
@@ -70,8 +72,11 @@ export async function GET(request: NextRequest) {
     await ensureWeekCompleteColumn();
 
     const includeActivity = request.nextUrl.searchParams.get("activity") === "1";
+    const yearParam = request.nextUrl.searchParams.get("year");
+    const year = yearParam ? parseInt(yearParam, 10) : 2026;
 
     const weeks = await prisma.week.findMany({
+      where: { year },
       orderBy: { weekNumber: "asc" },
       include: {
         days: { orderBy: { dayNumber: "asc" } },
@@ -169,7 +174,7 @@ export async function PATCH(request: NextRequest) {
 
       if (shouldRebuildStandings) {
         await rebuildWeekStandings(tx, week.id);
-        await rebuildSeasonStandings(tx);
+        await rebuildSeasonStandings(tx, week.year);
       }
 
       return week;
@@ -197,11 +202,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     await prisma.$transaction(async (tx) => {
+      const weekToDelete = await tx.week.findUnique({
+        where: { id: parseInt(weekId) },
+        select: { year: true },
+      });
+      const weekYear = weekToDelete?.year ?? 2026;
+
       await tx.week.delete({
         where: { id: parseInt(weekId) },
       });
 
-      await rebuildSeasonStandings(tx);
+      await rebuildSeasonStandings(tx, weekYear);
     });
 
     return NextResponse.json({ success: true });

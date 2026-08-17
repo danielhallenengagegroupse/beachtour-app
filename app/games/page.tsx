@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useYear } from "@/app/contexts/year-context";
 
 interface Player {
   id: number;
@@ -82,6 +83,7 @@ function createMatchFormFromGame(game: Game): MatchFormState {
 }
 
 export default function GamesPage() {
+  const { year, setYear, availableYears } = useYear();
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [scoreDrafts, setScoreDrafts] = useState<ScoreDrafts>({});
@@ -95,8 +97,10 @@ export default function GamesPage() {
   const [hideCompletedGames, setHideCompletedGames] = useState(false);
 
   useEffect(() => {
+    setSelectedWeekId(null);
     void fetchWeeks();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
   useEffect(() => {
     if (!selectedWeekId) {
@@ -175,7 +179,7 @@ export default function GamesPage() {
 
   async function fetchWeeks() {
     try {
-      const response = await fetch("/api/weeks?activity=1");
+      const response = await fetch(`/api/weeks?activity=1&year=${year}`);
       const data = await response.json();
       const nextWeeks = Array.isArray(data) ? data : [];
       setWeeks(nextWeeks);
@@ -493,7 +497,19 @@ export default function GamesPage() {
           <div>
             <h1 className="text-3xl font-bold">🎮 Matcher</h1>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-indigo-100">År:</span>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                className="rounded px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               onClick={beginAddMatch}

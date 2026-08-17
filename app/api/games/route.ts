@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       const week = await tx.week.findUnique({
         where: { id: day.weekId },
-        select: { weekComplete: true },
+        select: { weekComplete: true, year: true },
       });
 
       if (week?.weekComplete) {
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       });
 
       await rebuildWeekStandings(tx, day.weekId);
-      await rebuildSeasonStandings(tx);
+      await rebuildSeasonStandings(tx, week?.year ?? 2026);
 
       return createdGame;
     });

@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useYear } from "@/app/contexts/year-context";
 
 export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { year, setYear, availableYears } = useYear();
 
   async function handleLogout() {
     setLoading(true);
@@ -27,14 +29,28 @@ export default function AdminPage() {
             <h1 className="text-3xl font-bold">Adminpanel</h1>
             <p className="mt-2 text-indigo-100">Hantera spelare, veckor, matcher och resultat.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => void handleLogout()}
-            disabled={loading}
-            className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
-          >
-            {loading ? "Loggar ut..." : "Logga ut"}
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-indigo-100">År:</span>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                className="rounded px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              disabled={loading}
+              className="rounded-lg bg-white px-4 py-2 font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+            >
+              {loading ? "Loggar ut..." : "Logga ut"}
+            </button>
+          </div>
         </div>
       </header>
 

@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         }
 
         await prisma.$transaction(async (tx) => {
-          await rebuildSeasonStandings(tx);
+          await rebuildSeasonStandings(tx, week.year);
         });
 
         const games = await prisma.game.findMany({

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useYear } from "@/app/contexts/year-context";
 
 interface PlayerStanding {
   id: number;
@@ -39,14 +40,18 @@ function formatPercentage(value: number) {
 }
 
 export default function StandingsPage() {
+  const { year, setYear, availableYears } = useYear();
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<Week | null>(null);
   const [standings, setStandings] = useState<PlayerStanding[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setSelectedWeek(null);
+    setStandings([]);
     fetchWeeks();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
   useEffect(() => {
     if (selectedWeek) {
@@ -56,7 +61,7 @@ export default function StandingsPage() {
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch("/api/weeks?activity=1");
+      const response = await fetch(`/api/weeks?activity=1&year=${year}`);
       const data = await response.json();
       const nextWeeks = Array.isArray(data) ? data : [];
       setWeeks(nextWeeks);
@@ -97,7 +102,19 @@ export default function StandingsPage() {
             <h1 className="text-3xl font-bold">🎯 Resultat per vecka</h1>
             <p className="text-indigo-100 mt-2">Se veckans rankingar och poäng</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-indigo-100">År:</span>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                className="rounded px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
             <Link href="/public/matches" className="bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-400">
               Till Matcher
             </Link>

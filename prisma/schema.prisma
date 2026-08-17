@@ -23,14 +23,15 @@ model Player {
   dailyRankings DailyRanking[]
   gamesWon Game[] @relation("WinnerGames")
   weekParticipations WeekParticipant[]
-  seasonStanding SeasonStanding?
+  seasonStandings SeasonStanding[]
 
   @@map("players")
 }
 
 model Week {
   id        Int     @id @default(autoincrement())
-  weekNumber Int     @unique
+  year      Int      @default(2026)
+  weekNumber Int
   startDate DateTime
   endDate   DateTime
   rounds    Int      @default(1)
@@ -44,6 +45,7 @@ model Week {
   standings PlayerStanding[]
   participants WeekParticipant[]
 
+  @@unique([year, weekNumber])
   @@map("weeks")
 }
 
@@ -165,6 +167,7 @@ model PlayerStanding {
 model SeasonStanding {
   id        Int     @id @default(autoincrement())
   playerId  Int
+  year      Int      @default(2026)
   totalPoints Int @default(0)
   gamesPlayed Int @default(0)
   wins      Float @default(0)
@@ -174,6 +177,6 @@ model SeasonStanding {
 
   player    Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  @@unique([playerId])
+  @@unique([playerId, year])
   @@map("season_standings")
 }

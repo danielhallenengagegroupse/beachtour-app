@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       const week = await tx.week.findUnique({
         where: { id: existingGame.day.weekId },
-        select: { weekComplete: true },
+        select: { weekComplete: true, year: true },
       });
 
       if (week?.weekComplete) {
@@ -133,7 +133,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (!deferStandingsRebuild) {
         await rebuildWeekStandings(tx, existingGame.day.weekId);
-        await rebuildSeasonStandings(tx);
+        await rebuildSeasonStandings(tx, week?.year ?? 2026);
       }
 
       return updatedGame;
@@ -166,18 +166,18 @@ export async function DELETE(_: NextRequest, context: RouteContext) {
         throw new Error("GAME_NOT_FOUND");
       }
 
-      const week = await tx.week.findUnique({
+      const weekForDelete = await tx.week.findUnique({
         where: { id: existingGame.day.weekId },
-        select: { weekComplete: true },
+        select: { weekComplete: true, year: true },
       });
 
-      if (week?.weekComplete) {
+      if (weekForDelete?.weekComplete) {
         throw new Error("WEEK_COMPLETE");
       }
 
       await tx.game.delete({ where: { id: existingGame.id } });
       await rebuildWeekStandings(tx, existingGame.day.weekId);
-      await rebuildSeasonStandings(tx);
+      await rebuildSeasonStandings(tx, weekForDelete?.year ?? 2026);
     });
 
     return NextResponse.json({ success: true });

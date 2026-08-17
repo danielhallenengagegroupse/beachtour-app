@@ -71,7 +71,11 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(sortedStandings);
     } else if (type === "season") {
+      const yearParam = searchParams.get("year");
+      const year = yearParam ? parseInt(yearParam, 10) : 2026;
+
       const weeks = await prisma.week.findMany({
+        where: { year },
         select: { id: true, weekNumber: true },
         orderBy: { weekNumber: "asc" },
       });
@@ -148,7 +152,8 @@ export async function POST(request: NextRequest) {
 
     await prisma.$transaction(async (tx) => {
       await rebuildWeekStandings(tx, weekId);
-      await rebuildSeasonStandings(tx);
+      const weekRecord = await tx.week.findUnique({ where: { id: weekId }, select: { year: true } });
+      await rebuildSeasonStandings(tx, weekRecord?.year ?? 2026);
     }, { timeout: 30000, maxWait: 10000 });
 
     return NextResponse.json(

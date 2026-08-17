@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useYear } from "@/app/contexts/year-context";
 
 interface Player {
   id: number;
@@ -45,6 +46,7 @@ function normalizeName(value: string) {
 }
 
 export default function WeeksPage() {
+  const { year, setYear, availableYears } = useYear();
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameCount, setGameCount] = useState(0);
@@ -66,8 +68,15 @@ export default function WeeksPage() {
   });
 
   useEffect(() => {
-    void Promise.all([fetchWeeks(), fetchPlayers()]);
+    void fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    setSelectedWeekId(null);
+    setGameCount(0);
+    void fetchWeeks();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
   useEffect(() => {
     if (!selectedWeekId) {
@@ -101,7 +110,7 @@ export default function WeeksPage() {
 
   async function fetchWeeks() {
     try {
-      const response = await fetch("/api/weeks");
+      const response = await fetch(`/api/weeks?year=${year}`);
       const data = await response.json();
       const nextWeeks = Array.isArray(data) ? data : [];
       setWeeks(nextWeeks);
@@ -159,6 +168,7 @@ export default function WeeksPage() {
         body: JSON.stringify({
           weekNumber: Number(weekForm.weekNumber),
           date: new Date(weekForm.date).toISOString(),
+          year,
         }),
       });
 
@@ -558,7 +568,19 @@ export default function WeeksPage() {
             <h1 className="text-3xl font-bold">📅 Veckor</h1>
             <p className="mt-2 text-indigo-100">Skapa veckor, välj deltagare och auto-generera matcher.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-indigo-100">År:</span>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                className="rounded px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
             <Link href="/games" className="rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400">
               Till Matcher
             </Link>

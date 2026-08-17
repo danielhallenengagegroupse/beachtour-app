@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useYear } from "@/app/contexts/year-context";
 
 interface SeasonStanding {
   playerId: number;
@@ -23,18 +24,20 @@ interface SeasonStandingsResponse {
 }
 
 export default function SeasonStandingsPage() {
+  const { year, setYear, availableYears } = useYear();
   const [weeks, setWeeks] = useState<SeasonWeek[]>([]);
   const [standings, setStandings] = useState<SeasonStanding[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSeasonStandings();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
   const fetchSeasonStandings = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/standings?type=season");
+      const response = await fetch(`/api/standings?type=season&year=${year}`);
       const data: SeasonStandingsResponse = await response.json();
       setWeeks(Array.isArray(data?.weeks) ? data.weeks : []);
       setStandings(Array.isArray(data?.standings) ? data.standings : []);
@@ -56,9 +59,23 @@ export default function SeasonStandingsPage() {
             <h1 className="text-3xl font-bold">🏆 Säsongens Ställning</h1>
             <p className="text-indigo-100 mt-2">Totalt ställning för hela säsongen</p>
           </div>
-          <Link href="/public" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
-            ← Startsida
-          </Link>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-indigo-100">År:</span>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                className="rounded px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <Link href="/public" className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50">
+              ← Startsida
+            </Link>
+          </div>
         </div>
       </header>
 
